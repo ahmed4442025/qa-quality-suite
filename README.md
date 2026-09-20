@@ -9,16 +9,14 @@ QA Quality Suite bundles four coordinated skills that initialize a QA workspace,
 Install the complete suite for every detected agent:
 
 ```bash
-npx skills add GITHUB_OWNER/qa-quality-suite --all
+npx skills add ahmed4442025/qa-quality-suite --all
 ```
 
 Install the complete suite globally for Codex only:
 
 ```bash
-npx skills add GITHUB_OWNER/qa-quality-suite --skill "*" --agent codex -g -y
+npx skills add ahmed4442025/qa-quality-suite --skill "*" --agent codex -g -y
 ```
-
-Replace `GITHUB_OWNER` with the repository owner's GitHub username or organization.
 
 ## Included skills
 
