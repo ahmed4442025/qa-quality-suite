@@ -656,7 +656,16 @@
     )
     .join("");
   const project = $("projectName");
-  if (project.textContent.includes("{{PROJECT_NAME}}")) {
+  const configuredProjectName = String(
+    window.QA_CONFIG?.projectName || "",
+  ).trim();
+  if (
+    configuredProjectName &&
+    !configuredProjectName.includes("{{PROJECT_NAME}}")
+  ) {
+    project.textContent = configuredProjectName;
+    document.title = `مِعيار — ضمان الجودة | ${configuredProjectName}`;
+  } else {
     project.textContent = "قالب تجريبي";
     document.title = "مِعيار — قالب ضمان الجودة";
     $("dataNote").textContent = "بيانات توضيحية · جاهز لنتائج مشروعك";

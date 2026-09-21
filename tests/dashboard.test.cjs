@@ -1,6 +1,31 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const M = require("../skills/qa-init/template/qa_dashboard/js/model.js");
+const fs = require("node:fs");
+const path = require("node:path");
+const dashboardRoot = path.join(__dirname, "../skills/qa-init/template/qa_dashboard");
+const M = require("../skills/qa-init/template/qa_dashboard/app/js/model.js");
+
+test("dashboard template separates replaceable runtime from project data", () => {
+  for (const relative of [
+    "app/index.html",
+    "app/js/app.js",
+    "app/server.ps1",
+    "app/run.bat",
+    "config.js",
+    "data/manifest.js",
+    "run.bat",
+  ])
+    assert.equal(fs.existsSync(path.join(dashboardRoot, relative)), true, relative);
+  const html = fs.readFileSync(path.join(dashboardRoot, "app/index.html"), "utf8");
+  assert.match(html, /<base href="\.\.\/"/);
+  assert.match(html, /src="config\.js"/);
+  assert.match(html, /src="data\/manifest\.js"/);
+  const server = fs.readFileSync(path.join(dashboardRoot, "app/server.ps1"), "utf8");
+  assert.match(server, /Join-Path \$PSScriptRoot "\.\."/);
+  assert.match(server, /Join-Path \$dashboardRoot "data"/);
+  const launcher = fs.readFileSync(path.join(dashboardRoot, "run.bat"), "utf8");
+  assert.match(launcher, /app\\server\.ps1/);
+});
 
 function fixtures() {
   return M.normalize([

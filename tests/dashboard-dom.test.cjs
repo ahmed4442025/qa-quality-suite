@@ -4,14 +4,15 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { JSDOM } = require("jsdom");
 const postcss = require("postcss");
-const root = path.join(__dirname, "../skills/qa-init/template/qa_dashboard");
+const dashboardRoot = path.join(__dirname, "../skills/qa-init/template/qa_dashboard");
+const root = path.join(dashboardRoot, "app");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const source = (name) => fs.readFileSync(path.join(root, "js", name), "utf8");
 const settle = () => new Promise((resolve) => setImmediate(resolve));
 
-function setup(t, { tasks, query = "", fetcher, drawerWidth } = {}) {
+function setup(t, { tasks, query = "", fetcher, drawerWidth, projectName } = {}) {
   const dom = new JSDOM(html, {
-    url: `http://localhost/index.html${query}`,
+    url: `http://localhost/app/index.html${query}`,
     runScripts: "outside-only",
     pretendToBeVisual: true,
   });
@@ -36,7 +37,9 @@ function setup(t, { tasks, query = "", fetcher, drawerWidth } = {}) {
   if (drawerWidth) w.localStorage.setItem("qa_drawer_width", drawerWidth);
   if (tasks)
     w.MODULE_TEST = { moduleId: "test", moduleName: "وحدة الاختبار", tasks };
-  else w.eval(fs.readFileSync(path.join(root, "data/temp.js"), "utf8"));
+  else w.eval(fs.readFileSync(path.join(dashboardRoot, "data/temp.js"), "utf8"));
+  w.eval(fs.readFileSync(path.join(dashboardRoot, "config.js"), "utf8"));
+  if (projectName) w.QA_CONFIG = Object.freeze({ projectName });
   w.eval(source("model.js"));
   w.eval(source("app.js"));
   const d = w.document;
@@ -125,6 +128,17 @@ test("the original sample renders with a usable title, critical count, and full 
   );
   assert.equal($("toast").parentElement.id, "taskDialog");
   assert.equal(d.querySelectorAll("#detailContent .detail-section").length, 3);
+});
+test("project identity comes from config without modifying the runtime HTML", (t) => {
+  const { d, $ } = setup(t, {
+    tasks: findings(),
+    projectName: "مشروع المخزون",
+  });
+  assert.equal($("projectName").textContent, "مشروع المخزون");
+  assert.equal(d.title, "مِعيار — ضمان الجودة | مشروع المخزون");
+  assert.equal(d.baseURI, "http://localhost/");
+  assert.equal(new URL("data/example.js", d.baseURI).pathname, "/data/example.js");
+  assert.doesNotMatch(html, /\{\{PROJECT_NAME\}\}/);
 });
 test("search, clear filters, and explicit empty type selection update the DOM and URL", (t) => {
   const { w, d, $, change } = setup(t, { tasks: findings() });

@@ -1,6 +1,8 @@
 # QA Dashboard Local Server - PowerShell HTTP Listener
 # Serves static files and updates task status directly in data/*.js files
 
+$dashboardRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
+$dashboardRootPrefix = $dashboardRoot.TrimEnd("\") + "\"
 $started = $false
 
 for ($i = 0; $i -lt 15; $i++) {
@@ -22,7 +24,7 @@ if (-not $started) {
     exit 1
 }
 
-$url = "http://localhost:$port/index.html"
+$url = "http://localhost:$port/app/index.html"
 Write-Host "===================================================" -ForegroundColor Cyan
 Write-Host "  QA Dashboard is running!" -ForegroundColor Green
 Write-Host "  URL: $url" -ForegroundColor Yellow
@@ -69,7 +71,7 @@ try {
 
         $urlPath = $req.Url.AbsolutePath
         if ($urlPath -eq "/" -or $urlPath -eq "") {
-            $urlPath = "/index.html"
+            $urlPath = "/app/index.html"
         }
 
         try {
@@ -95,7 +97,7 @@ try {
                     continue
                 }
 
-                $targetDir = Join-Path $PSScriptRoot "data"
+                $targetDir = Join-Path $dashboardRoot "data"
                 $jsFiles = Get-ChildItem -Path $targetDir -Filter "*.js"
                 $found = $false
 
@@ -142,10 +144,12 @@ try {
             # 2. Static File Serving (read-only)
             # -------------------------------------------------------------
             $cleanRelPath = $urlPath.TrimStart("/").Replace("/", "\")
-            $fullPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot $cleanRelPath))
+            $fullPath = [System.IO.Path]::GetFullPath((Join-Path $dashboardRoot $cleanRelPath))
 
-            # Security check: must reside inside current folder
-            if ($fullPath.StartsWith($PSScriptRoot) -and [System.IO.File]::Exists($fullPath)) {
+            # Security check: must reside inside the dashboard root.
+            $insideDashboard = $fullPath.Equals($dashboardRoot, [System.StringComparison]::OrdinalIgnoreCase) -or
+                $fullPath.StartsWith($dashboardRootPrefix, [System.StringComparison]::OrdinalIgnoreCase)
+            if ($insideDashboard -and [System.IO.File]::Exists($fullPath)) {
                 $ext = [System.IO.Path]::GetExtension($fullPath).ToLower()
                 switch ($ext) {
                     ".html" { $res.ContentType = "text/html; charset=utf-8" }
