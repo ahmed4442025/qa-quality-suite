@@ -51,6 +51,14 @@ skills/
 
 Each directory is a standalone Agent Skill, while the suite provides the shared workflow and supporting dashboard templates required to use them together.
 
+## Miyar developer dashboard
+
+The `qa_dashboard` template includes the Miyar (مِعيار) interface: Arabic RTL layouts, light/dark themes, actionable priority summaries, searchable issue lists, a detail panel, and a full-detail report view. On small screens the list becomes issue cards. Filters, sorting, pagination, and the selected issue persist in the URL.
+
+Run `qa_dashboard/run.bat` on Windows to view the dashboard and save status changes directly to its existing module files. Status changes are confirmed by the server and can be undone. The `MODULE_*` data schema and `/api/status` endpoint are unchanged. No package installation or build step is needed to run the dashboard; CSS and JavaScript ship with the template. Google Fonts is optional, with local font fallbacks.
+
+For dashboard development checks, run `npm install` followed by `npm test` at the suite root. Tests cover data compatibility, filtering, pagination, rendering, status persistence and undo, failure feedback, and text-color contrast. DOM tests do not replace browser layout or native keyboard/accessibility testing.
+
 ## Requirements
 
 - Node.js with `npx`

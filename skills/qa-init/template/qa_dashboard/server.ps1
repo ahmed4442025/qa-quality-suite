@@ -155,6 +155,7 @@ try {
                     ".png"  { $res.ContentType = "image/png" }
                     ".jpg"  { $res.ContentType = "image/jpeg" }
                     ".svg"  { $res.ContentType = "image/svg+xml" }
+                    ".woff2" { $res.ContentType = "font/woff2" }
                     default { $res.ContentType = "application/octet-stream" }
                 }
 

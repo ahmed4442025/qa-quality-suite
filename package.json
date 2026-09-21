@@ -1,0 +1,11 @@
+{
+  "name": "qa-quality-suite",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/dashboard.test.cjs tests/dashboard-dom.test.cjs"
+  },
+  "devDependencies": {
+    "jsdom": "29.1.1",
+    "postcss": "8.5.28"
+  }
+}

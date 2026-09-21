@@ -13,7 +13,7 @@ description: Init QA (/qa-init)
 
 ### 1. استخراج اسم المشروع ونسخ لوحة المطورين (`qa_dashboard`):
 - استخرج اسم المشروع تلقائياً من ملف `pubspec.yaml` (حقل `name:`) أو `package.json` أو من اسم مجلد المشروع الرئيسي.
-- انسخ مجلد `template/qa_dashboard` (المجاور لملف `SKILL.md` هذا) إلى مسار `./qa_dashboard` في المشروع (يحتوي على: `index.html`, `run.bat`, `server.ps1`, `js/app.js`, `data/manifest.js`, و `data/temp.js`).
+- انسخ مجلد `template/qa_dashboard` (المجاور لملف `SKILL.md` هذا) بالكامل إلى مسار `./qa_dashboard` في المشروع، بما فيه `index.html`, `run.bat`, `server.ps1`, `css/style.css`, `js/model.js`, `js/app.js`, `data/manifest.js`, و `data/temp.js`.
 - استبدل `{{PROJECT_NAME}}` داخل `qa_dashboard/index.html` باسم المشروع الفعلي في كل من وسم `<title>` والبادج في العنوان الرئيسي.
 
 ### 2. نسخ تقرير العميل المستقل (`qa_report`):

@@ -1,3 +1,6 @@
 # Operating-system files
 .DS_Store
 Thumbs.db
+
+# Dashboard development checks (not needed to run the template)
+node_modules/

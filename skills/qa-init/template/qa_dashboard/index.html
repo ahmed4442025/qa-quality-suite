@@ -1,264 +1,366 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>مركز تدقيق وضمان الجودة | {{PROJECT_NAME}}</title>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-    }
-  </script>
-  <!-- Prevent Theme FOUC -->
-  <script>
-    if (localStorage.getItem('qa_theme') === 'dark' || (!('qa_theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  </script>
-  <!-- Google Fonts: Cairo & JetBrains Mono -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Cairo', sans-serif; }
-    code, pre, .font-mono { font-family: 'JetBrains Mono', monospace; }
-
-    /* Custom dark mode scrollbar */
-    .dark ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-    .dark ::-webkit-scrollbar-track {
-      background: #0f172a;
-    }
-    .dark ::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 4px;
-    }
-    .dark ::-webkit-scrollbar-thumb:hover {
-      background: #475569;
-    }
-  </style>
-</head>
-<body class="bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen pb-12 transition-colors duration-150">
-
-  <!-- Header -->
-  <header class="bg-slate-900 text-white shadow-md sticky top-0 z-50 dark:bg-slate-950 dark:border-b dark:border-slate-800">
-    <div class="max-w-[98%] mx-auto px-4 py-3.5 flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <span class="text-2xl">🛡️</span>
-        <div>
-          <h1 class="text-lg font-black tracking-tight flex items-center gap-2.5">
-            <span>مركز تدقيق وضمان الجودة</span>
-            <span class="text-xs px-2.5 py-0.5 rounded-full bg-indigo-900/70 text-indigo-300 border border-indigo-700/60 font-medium">{{PROJECT_NAME}}</span>
-          </h1>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f1f5f9" />
+    <title>مِعيار — ضمان الجودة | {{PROJECT_NAME}}</title>
+    <script>
+      try {
+        var preference = localStorage.getItem("qa_theme");
+        document.documentElement.dataset.theme =
+          preference ||
+          (matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light");
+      } catch (_) {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
+    <link rel="stylesheet" href="css/fonts.css" />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="js/model.js" defer></script>
+    <script src="js/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#resultsHeading">انتقل إلى المشاكل</a>
+    <header class="app-header">
+      <div class="header-inner">
+        <a
+          class="brand"
+          href="index.html"
+          aria-label="مِعيار — الصفحة الرئيسية"
+        >
+          <svg
+            class="brand-mark"
+            viewBox="0 0 40 40"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M7 14V7h7M26 7h7v7M33 26v7h-7M14 33H7v-7"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+            <path
+              d="m12 20 5 5 11-11"
+              stroke="currentColor"
+              stroke-width="2.5"
+            />
+          </svg>
+          <span class="brand-name"
+            >مِعيار<span class="brand-caption">هندسة الجودة</span></span
+          >
+        </a>
+        <div class="project-context">
+          <span class="context-label">مساحة المشروع</span
+          ><span id="projectName" class="project-name" dir="auto"
+            >{{PROJECT_NAME}}</span
+          >
         </div>
-      </div>
-      
-      <!-- Top Action Buttons: Theme Toggle & Refresh -->
-      <div class="flex items-center gap-2">
-        <!-- Theme Toggle Button (Icon Only) -->
-        <button id="themeToggleBtn" onclick="toggleDarkMode()"
-                title="تبديل الوضع الداكن / الفاتح"
-                class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center justify-center cursor-pointer shadow-sm">
-          <span id="themeToggleIcon" class="text-base leading-none">🌙</span>
-        </button>
-
-        <!-- Refresh button -->
-        <button onclick="refreshDashboard()"
-                class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-1.5 cursor-pointer shadow-sm">
-          <span>🔄</span>
-          <span>تحديث البيانات</span>
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <!-- Main Content Container -->
-  <main class="max-w-[98%] mx-auto px-2 sm:px-4 pt-4">
-
-    <!-- KPI Summary Pills -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 mb-4 text-xs font-bold">
-      <div class="bg-white dark:bg-slate-900 px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between transition-colors">
-        <span class="text-slate-500 dark:text-slate-400">إجمالي التاسكات:</span>
-        <span id="statTotal" class="text-base font-black text-slate-900 dark:text-slate-100">0</span>
-      </div>
-      <div class="bg-white dark:bg-slate-900 px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between transition-colors">
-        <span class="text-amber-600 dark:text-amber-400">⏳ قيد الانتظار:</span>
-        <span id="statPending" class="text-base font-black text-amber-600 dark:text-amber-400">0</span>
-      </div>
-      <div class="bg-white dark:bg-slate-900 px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between transition-colors">
-        <span class="text-blue-600 dark:text-blue-400">🔄 جاري العمل:</span>
-        <span id="statInProgress" class="text-base font-black text-blue-600 dark:text-blue-400">0</span>
-      </div>
-      <div class="bg-white dark:bg-slate-900 px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between transition-colors">
-        <span class="text-emerald-600 dark:text-emerald-400">✅ تم الحل:</span>
-        <span id="statDone" class="text-base font-black text-emerald-600 dark:text-emerald-400">0</span>
-      </div>
-      <div class="bg-white dark:bg-slate-900 px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between transition-colors">
-        <span class="text-purple-600 dark:text-purple-400">📦 مؤرشف:</span>
-        <span id="statArchived" class="text-base font-black text-purple-600 dark:text-purple-400">0</span>
-      </div>
-      <div class="bg-white dark:bg-slate-900 px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between transition-colors">
-        <span class="text-slate-400 dark:text-slate-400">❌ ملغية:</span>
-        <span id="statCancelled" class="text-base font-black text-slate-500 dark:text-slate-400">0</span>
-      </div>
-      <div class="bg-white dark:bg-slate-900 px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between transition-colors">
-        <span class="text-rose-600 dark:text-rose-400">⚠️ يحتاج باك إند:</span>
-        <span id="statBackend" class="text-base font-black text-rose-600 dark:text-rose-400">0</span>
-      </div>
-    </div>
-
-    <!-- Filter Toolbar -->
-    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-3.5 mb-4 space-y-3 transition-colors">
-      
-      <!-- Row 1: Search, Module, Culprit, and Type Multi-Select Dropdown -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5">
-        <!-- Search -->
-        <div class="lg:col-span-4">
-          <input type="text" id="searchInput" placeholder="🔍 بحث بكود التاسك، العنوان، أو الملف..."
-                 class="w-full text-xs font-semibold px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:border-slate-900 dark:focus:border-slate-500 focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-500 outline-none transition">
-        </div>
-
-        <!-- Module Dropdown Filter (LTR for English Module Names) -->
-        <div class="lg:col-span-3 relative" dir="ltr">
-          <button id="moduleDropdownBtn" type="button"
-                  class="w-full text-xs font-bold px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center justify-between gap-1.5 transition text-left text-slate-800 dark:text-slate-200">
-            <div class="flex items-center gap-1.5 truncate">
-              <span id="moduleFilterSummaryText" class="truncate text-slate-800 dark:text-slate-200">📦 All Modules</span>
-            </div>
-            <div class="flex items-center gap-1.5 shrink-0">
-              <span id="moduleFilterBadge" class="text-[11px] px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">0</span>
-              <svg class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0 transition-transform" id="moduleDropdownChevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-              </svg>
-            </div>
+        <div class="header-actions">
+          <button type="button" class="button subtle" id="refreshBtn" aria-label="تحديث البيانات" title="تحديث البيانات">
+            <span data-icon="refresh"></span
+            ><span class="refresh-label">تحديث البيانات</span>
           </button>
-
-          <!-- Module Popover Menu -->
-          <div id="moduleDropdownMenu" class="hidden absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-40 p-1.5 w-full min-w-[280px]">
-            <div class="pb-1.5 mb-1.5 border-b border-slate-100 dark:border-slate-800 text-[11px] font-bold text-slate-400 px-1.5">
-              Select Module:
+          <span class="header-divider" aria-hidden="true"></span>
+          <button
+            type="button"
+            class="icon-button"
+            id="themeToggleBtn"
+            aria-label="تفعيل الوضع الداكن"
+            title="تفعيل الوضع الداكن"
+          >
+            <span data-icon="moon"></span>
+          </button>
+        </div>
+      </div>
+    </header>
+    <main class="workspace" id="mainContent">
+      <section class="metrics" aria-label="ملخص الجودة — اضغط لتصفية المشاكل">
+        <button
+          type="button"
+          class="metric"
+          data-preset="open"
+          aria-pressed="false"
+        >
+          <span class="metric-top"
+            >مشاكل مفتوحة<span data-icon="layers"></span></span
+          ><span class="metric-value mono" id="statOpen">0</span>
+        </button>
+        <div class="priority-metric" role="group" aria-label="الأولوية المفتوحة">
+          <button
+            type="button"
+            class="priority-segment priority-critical"
+            data-preset="critical"
+            aria-pressed="false"
+          >
+            <span class="metric-top"
+              ><span class="status-dot"></span>حرجة<span data-icon="alert"></span></span
+            ><span class="metric-value mono" id="statCritical">0</span>
+          </button><button
+            type="button"
+            class="priority-segment priority-high"
+            data-preset="high"
+            aria-pressed="false"
+          >
+            <span class="metric-top"
+              ><span class="status-dot"></span>عالية<span data-icon="activity"></span></span
+            ><span class="metric-value mono" id="statHigh">0</span>
+          </button>
+        </div>
+        <button
+          type="button"
+          class="metric"
+          data-preset="in_progress"
+          aria-pressed="false"
+        >
+          <span class="metric-top"
+            >جاري العمل<span data-icon="activity"></span></span
+          ><span class="metric-value mono" id="statInProgress">0</span>
+        </button>
+        <button
+          type="button"
+          class="metric total-metric"
+          data-preset="all"
+          aria-pressed="false"
+        >
+          <span class="metric-top">إجمالي المشاكل<span data-icon="layers"></span></span
+          ><span class="metric-value mono" id="statTotal">0</span>
+        </button>
+      </section>
+      <section class="issues-section" aria-labelledby="resultsHeading">
+        <h2 id="resultsHeading" class="sr-only" tabindex="-1">مشاكل المشروع</h2>
+        <div class="section-header">
+          <div class="completion-compact">
+            <span class="completion-label-short">تم الحل</span>
+            <div
+              class="progress-track"
+              role="progressbar"
+              aria-label="نسبة الإنجاز ضمن الفلاتر الحالية"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="0"
+              id="completionProgress"
+            >
+              <span></span>
             </div>
-            <div id="moduleOptionsContainer" class="space-y-1 max-h-60 overflow-y-auto pr-1">
-              <!-- Dynamically populated by app.js -->
-            </div>
+            <span class="mono" id="completionValue">0 / 0</span>
+            <span id="completionCaption" class="sr-only">نسبة الإنجاز ضمن الفلاتر الحالية</span>
+          </div>
+          <div class="view-switch" role="group" aria-label="طريقة عرض المشاكل">
+            <button type="button" data-view="list" aria-pressed="true">
+              <span data-icon="list"></span>القائمة</button
+            ><button type="button" data-view="report" aria-pressed="false">
+              <span data-icon="document"></span>التفاصيل
+            </button
+            ><button type="button" data-view="board" aria-pressed="false">
+              <span data-icon="board"></span>لوحة المهام
+            </button>
           </div>
         </div>
-
-        <!-- Culprit Select -->
-        <div class="lg:col-span-2">
-          <select id="culpritFilter" class="w-full text-xs font-bold px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 outline-none cursor-pointer transition">
-            <option value="all">مصدر الخلل: الكل</option>
-            <option value="Mobile">📱 تطبيق الموبايل</option>
-            <option value="Backend">🖥️ سيرفر الباك إند</option>
-            <option value="Both">🔄 كلاهما</option>
-          </select>
-        </div>
-
-        <!-- Multi-Select Type Dropdown Trigger -->
-        <div class="lg:col-span-3 relative">
-          <button id="typeDropdownBtn" type="button"
-                  class="w-full text-xs font-bold px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center justify-between gap-1.5 transition text-slate-800 dark:text-slate-200">
-            <div class="flex items-center gap-1.5 truncate">
-              <span>🏷️</span>
-              <span id="typeFilterSummaryText" class="truncate text-slate-800 dark:text-slate-200">كل أنواع المشاكل (الكل)</span>
+        <div class="workbench">
+          <div class="filter-toolbar">
+            <div class="search-field">
+              <span data-icon="search"></span
+              ><label class="sr-only" for="searchInput"
+                >البحث في المشاكل والكود والملفات</label
+              ><input
+                id="searchInput"
+                type="search"
+                placeholder="ابحث بالعنوان، كود المشكلة، أو الملف…"
+                autocomplete="off"
+              /><kbd aria-hidden="true">/</kbd>
+              <button type="button" class="icon-button search-clear" id="clearSearchBtn" aria-label="مسح البحث" title="مسح البحث" hidden><span data-icon="close"></span></button>
             </div>
-            <svg class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0 transition-transform" id="typeDropdownChevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-            </svg>
-          </button>
-
-          <!-- Dropdown Popover Menu -->
-          <div id="typeDropdownMenu" class="hidden absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-40 p-2.5 w-72 sm:w-80">
-            <!-- Header Actions -->
-            <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 dark:border-slate-800 text-[11px] font-bold">
-              <span class="text-slate-600 dark:text-slate-400">تصفية حسب نوع المشكلة:</span>
-              <div class="flex items-center gap-2">
-                <button type="button" id="selectAllTypesBtn" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline">اختيار الكل</button>
-                <span class="text-slate-300 dark:text-slate-700">|</span>
-                <button type="button" id="deselectAllTypesBtn" class="text-rose-600 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-300 hover:underline">إلغاء التحديد</button>
+            <div class="module-field">
+              <label class="sr-only" for="moduleFilter">الوحدة</label
+              ><select id="moduleFilter">
+                <option value="all">كل الوحدات</option>
+              </select>
+            </div>
+            <div class="status-filter-group" role="group" aria-label="تصفية حسب الحالة، يمكن اختيار أكثر من حالة">
+              <button type="button" data-status-filter="pending" aria-pressed="false" aria-label="تصفية بقيد الانتظار" title="قيد الانتظار"><span data-icon="clock"></span></button>
+              <button type="button" data-status-filter="in_progress" aria-pressed="false" aria-label="تصفية بجاري العمل" title="جاري العمل"><span data-icon="activity"></span></button>
+              <button type="button" data-status-filter="done" aria-pressed="false" aria-label="تصفية بتم الحل" title="تم الحل"><span data-icon="check"></span></button>
+              <button type="button" data-status-filter="archived" aria-pressed="false" aria-label="تصفية بالمؤرشف" title="مؤرشف"><span data-icon="archive"></span></button>
+              <button type="button" data-status-filter="cancelled" aria-pressed="false" aria-label="تصفية بالملغي" title="ملغي"><span data-icon="cancel"></span></button>
+            </div>
+            <details class="advanced-filters" id="filterPanel">
+              <summary>
+                <span data-icon="filter"></span>الفلاتر<span
+                  id="filterBadge"
+                  class="filter-badge"
+                  hidden
+                  >0</span
+                ><span data-icon="chevron"></span>
+              </summary>
+              <div class="filter-popover">
+                <div class="popover-heading">
+                  <strong>خصص النتائج</strong
+                  ><button
+                    type="button"
+                    id="closeFiltersBtn"
+                    class="icon-button"
+                    aria-label="إغلاق الفلاتر"
+                  >
+                    <span data-icon="close"></span>
+                  </button>
+                </div>
+                <div class="filter-fields">
+                  <div class="field">
+                    <label for="severityFilter">الأهمية</label
+                    ><select id="severityFilter">
+                      <option value="all">كل المستويات</option>
+                      <option value="Critical">حرجة</option>
+                      <option value="High">عالية</option>
+                      <option value="Medium">متوسطة</option>
+                      <option value="Low">منخفضة</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="culpritFilter">المنصة المتأثرة</label
+                    ><select id="culpritFilter">
+                      <option value="all">كل المنصات</option>
+                      <option value="Mobile">تطبيق الموبايل</option>
+                      <option value="Backend">الخادم</option>
+                      <option value="Both">الموبايل والخادم معًا</option>
+                    </select>
+                  </div>
+                </div>
+                <fieldset class="type-fieldset">
+                  <legend>نوع المشكلة</legend>
+                  <div class="type-options" id="typeOptions"></div>
+                  <div class="type-actions">
+                    <button type="button" class="text-button" id="allTypesBtn">
+                      اختيار الكل</button
+                    ><button type="button" class="text-button" id="noTypesBtn">
+                      إلغاء الاختيار
+                    </button>
+                  </div>
+                </fieldset>
               </div>
-            </div>
-
-            <!-- Checkbox List Container -->
-            <div id="typeCheckboxesContainer" class="space-y-1 max-h-60 overflow-y-auto pr-1">
-              <!-- Rendered dynamically by app.js -->
+            </details>
+            <div class="sort-field">
+              <span data-icon="sort" aria-hidden="true"></span>
+              <label class="sr-only" for="sortSelect">ترتيب المشاكل</label>
+              <select id="sortSelect" aria-label="ترتيب المشاكل">
+                <option value="priority">الأعلى أهمية</option>
+                <option value="status">الحالة</option>
+                <option value="id">كود المشكلة</option>
+              </select>
             </div>
           </div>
+          <div class="results-context">
+            <strong id="resultsSummary" class="results-summary" role="status" aria-live="polite">0 مشكلة</strong>
+            <div class="active-filters" id="activeFiltersBar" hidden>
+              <span class="muted">النتائج حسب:</span>
+              <div id="activeFilters" class="filter-chips"></div>
+              <button
+                type="button"
+                class="text-button reset-button"
+                data-action="reset"
+              >
+                مسح الفلاتر
+              </button>
+            </div>
+          </div>
+          <div id="results"></div>
+          <div class="pagination" id="pagination" hidden>
+            <div class="page-size-field">
+              <label for="pageSizeSelect">عرض</label>
+              <select id="pageSizeSelect" aria-label="عدد المشاكل في الصفحة">
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="200">200</option>
+              </select>
+              <span>مشكلة</span>
+            </div>
+            <nav class="pagination-actions" aria-label="صفحات المشاكل">
+              <button type="button" class="page-arrow" id="prevPageBtn" aria-label="الصفحة السابقة">
+                <span data-icon="arrow-right"></span></button
+              ><div class="page-numbers" id="pageNumbers"></div
+              ><button type="button" class="page-arrow" id="nextPageBtn" aria-label="الصفحة التالية">
+                <span data-icon="arrow"></span>
+              </button>
+            </nav>
+            <span id="pageInfo" class="sr-only" role="status" aria-live="polite"></span>
+          </div>
         </div>
+      </section>
+      <footer class="workspace-footer">
+        <span class="footer-brand"
+          >مِعيار<span class="footer-separator">/</span>كل تفصيلة تصنع
+          فرقًا.</span
+        ><span id="dataNote">الحالات مرتبطة بملفات المشروع</span>
+      </footer>
+      <noscript
+        ><div class="notice">
+          فعّل JavaScript لعرض نتائج الفحص والتفاعل معها.
+        </div></noscript
+      >
+    </main>
+    <dialog id="taskDialog" class="task-dialog" aria-labelledby="detailTitle">
+      <div
+        class="drawer-resize-handle"
+        id="drawerResizeHandle"
+        role="separator"
+        aria-label="تغيير عرض لوحة التفاصيل"
+        aria-orientation="vertical"
+        aria-valuemin="440"
+        aria-valuemax="1100"
+        aria-valuenow="760"
+        aria-controls="detailContent"
+        tabindex="0"
+        title="اسحب لتغيير العرض · نقرتان لإعادة الضبط"
+      ></div>
+      <div class="dialog-shell">
+        <header class="dialog-header">
+          <div class="dialog-heading-row" id="detailHeaderMeta"></div>
+          <button
+            type="button"
+            class="icon-button"
+            id="closeDetailBtn"
+            aria-label="إغلاق تفاصيل المشكلة"
+            autofocus
+          >
+            <span data-icon="close"></span>
+          </button>
+        </header>
+        <div class="dialog-content" id="detailContent"></div>
+        <footer class="dialog-footer">
+          <span id="detailPosition" class="muted"></span>
+          <div class="pagination-actions">
+            <button type="button" class="button subtle" id="prevTaskBtn">
+              <span data-icon="arrow-right"></span>السابقة</button
+            ><button type="button" class="button subtle" id="nextTaskBtn">
+              التالية<span data-icon="arrow"></span>
+            </button>
+          </div>
+        </footer>
       </div>
-
-      <!-- Row 2: Interactive Quick Type Pills (Chips) -->
-      <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-1.5 text-xs font-bold">
-        <span class="text-slate-500 dark:text-slate-400 text-[11px] font-semibold ml-1">تصفية سريعة بالنوع:</span>
-        <div id="typeChipsContainer" class="flex flex-wrap items-center gap-1.5">
-          <!-- Rendered dynamically by app.js -->
-        </div>
-      </div>
-
-      <!-- Row 3: Status & Severity Tabs Row -->
-      <div class="flex flex-wrap items-center justify-between gap-y-2.5 gap-x-4 pt-2.5 border-t border-slate-100 dark:border-slate-800 text-xs font-bold">
-        <!-- Status Filter Group -->
-        <div class="flex flex-wrap items-center gap-1.5">
-          <span class="text-slate-500 dark:text-slate-400 text-[11px] font-semibold ml-1">الحالة:</span>
-          <button data-status-filter="all" class="px-2.5 py-1.5 rounded-md bg-slate-900 text-white border border-slate-900 shadow-sm transition">الكل <span id="statusCount-all">(0)</span></button>
-          <button data-status-filter="pending" class="px-2.5 py-1.5 rounded-md bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition">قيد الانتظار <span id="statusCount-pending">(0)</span></button>
-          <button data-status-filter="in_progress" class="px-2.5 py-1.5 rounded-md bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition">جاري العمل <span id="statusCount-in_progress">(0)</span></button>
-          <button data-status-filter="done" class="px-2.5 py-1.5 rounded-md bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition">تم الحل <span id="statusCount-done">(0)</span></button>
-          <button data-status-filter="archived" class="px-2.5 py-1.5 rounded-md bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition">مؤرشف <span id="statusCount-archived">(0)</span></button>
-          <button data-status-filter="cancelled" class="px-2.5 py-1.5 rounded-md bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition">ملغية <span id="statusCount-cancelled">(0)</span></button>
-        </div>
-
-        <!-- Severity Filter Group -->
-        <div class="flex flex-wrap items-center gap-1.5">
-          <span class="text-slate-500 dark:text-slate-400 text-[11px] font-semibold ml-1">الأهمية:</span>
-          <button data-severity-filter="all" class="px-2.5 py-1.5 rounded-md bg-slate-900 text-white border border-slate-900 shadow-sm transition">الكل <span id="sevCount-all">(0)</span></button>
-          <button data-severity-filter="Critical" class="px-2.5 py-1.5 rounded-md bg-white text-rose-700 border border-rose-200 hover:bg-rose-50 transition">حرجة <span id="sevCount-Critical">(0)</span></button>
-          <button data-severity-filter="High" class="px-2.5 py-1.5 rounded-md bg-white text-orange-700 border border-orange-200 hover:bg-orange-50 transition">عالية <span id="sevCount-High">(0)</span></button>
-          <button data-severity-filter="Medium" class="px-2.5 py-1.5 rounded-md bg-white text-amber-800 border border-amber-300 hover:bg-amber-50 transition">متوسطة <span id="sevCount-Medium">(0)</span></button>
-          <button data-severity-filter="Low" class="px-2.5 py-1.5 rounded-md bg-white text-sky-700 border border-sky-200 hover:bg-sky-50 transition">منخفضة <span id="sevCount-Low">(0)</span></button>
-        </div>
-
-        <!-- Count Indicator -->
-        <span id="filteredCount" class="text-slate-500 dark:text-slate-400 font-bold bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-700 shrink-0">0 من 0 تاسك</span>
-      </div>
+    </dialog>
+    <div class="toast" id="toast" hidden>
+      <span class="toast-icon" id="toastIcon"></span>
+      <p
+        id="toastMessage"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      ></p>
+      <button type="button" class="text-button" id="toastAction" hidden>
+        تراجع</button
+      ><button
+        type="button"
+        class="icon-button"
+        id="dismissToastBtn"
+        aria-label="إغلاق التنبيه"
+      >
+        <span data-icon="close"></span>
+      </button>
     </div>
-
-    <!-- Excel / Jira Style Table Container -->
-    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
-      <div class="overflow-x-auto">
-        <table class="w-full text-right border-collapse">
-          <!-- Table Head -->
-          <thead>
-            <tr class="bg-slate-900 text-white text-xs font-bold border-b border-slate-800 dark:bg-slate-950 dark:border-slate-800">
-              <th class="px-3 py-3 w-36 whitespace-nowrap">كود التاسك والحالة</th>
-              <th class="px-4 py-3 min-w-[240px]">المشكلة وموقع الكود</th>
-              <th class="px-3 py-3 w-44 min-w-[150px] whitespace-nowrap">المنصة والنوع</th>
-              <th class="px-4 py-3 min-w-[250px]">سيناريو التجربة والمخاطر</th>
-              <th class="px-4 py-3 min-w-[240px]">التحليل التقني وجذر الخلل</th>
-              <th class="px-4 py-3 min-w-[300px]">طريقة الحل والكود المقترح</th>
-            </tr>
-          </thead>
-          
-          <!-- Table Body -->
-          <tbody id="taskTableBody" class="divide-y divide-slate-200 dark:divide-slate-800 text-xs">
-            <!-- Dynamic Rows Injected by app.js -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-  </main>
-
-  <!-- Modules Manifest Loader -->
-  <script src="data/manifest.js"></script>
-
-  <!-- Core Controller Script -->
-  <script src="js/app.js"></script>
-</body>
+    <script src="data/manifest.js"></script>
+  </body>
 </html>
