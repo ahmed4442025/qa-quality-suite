@@ -27,6 +27,14 @@ test("dashboard template separates replaceable runtime from project data", () =>
   assert.match(launcher, /app\\server\.ps1/);
 });
 
+test("dashboard server handles Ctrl+C without a PowerShell callback deadlock", () => {
+  const server = fs.readFileSync(path.join(dashboardRoot, "app/server.ps1"), "utf8");
+  assert.match(server, /namespace QaDashboard/);
+  assert.match(server, /Console\.CancelKeyPress \+= Handler/);
+  assert.match(server, /ConsoleSignal\]::StopRequested/);
+  assert.doesNotMatch(server, /\[ConsoleCancelEventHandler\]\s*\{/);
+});
+
 function fixtures() {
   return M.normalize([
     {

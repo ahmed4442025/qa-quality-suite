@@ -5,6 +5,57 @@ $dashboardRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $dashboardRootPrefix = $dashboardRoot.TrimEnd("\") + "\"
 $started = $false
 
+# Keep the console callback entirely in managed code. A PowerShell scriptblock
+# used as ConsoleCancelEventHandler can deadlock because the callback runs on a
+# thread that has no PowerShell runspace. The request loop polls this flag and
+# performs all listener cleanup on the main PowerShell thread.
+if (-not ("QaDashboard.ConsoleSignal" -as [type])) {
+    Add-Type -TypeDefinition @'
+using System;
+
+namespace QaDashboard
+{
+    public static class ConsoleSignal
+    {
+        public static volatile bool StopRequested;
+        private static bool installed;
+        private static readonly ConsoleCancelEventHandler Handler = OnCancelKeyPress;
+
+        public static bool Install()
+        {
+            StopRequested = false;
+            if (installed) return true;
+
+            try
+            {
+                Console.CancelKeyPress += Handler;
+                installed = true;
+                return true;
+            }
+            catch
+            {
+                // A host without a real console cannot install this handler.
+                return false;
+            }
+        }
+
+        public static void Remove()
+        {
+            if (!installed) return;
+            Console.CancelKeyPress -= Handler;
+            installed = false;
+        }
+
+        private static void OnCancelKeyPress(object sender, ConsoleCancelEventArgs eventArgs)
+        {
+            eventArgs.Cancel = true;
+            StopRequested = true;
+        }
+    }
+}
+'@
+}
+
 for ($i = 0; $i -lt 15; $i++) {
     try {
         $port = Get-Random -Minimum 30000 -Maximum 31000
@@ -35,28 +86,19 @@ Start-Process $url
 
 $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 $global:listener = $listener
-
-# Graceful Ctrl+C handler
-$cancelHandler = [ConsoleCancelEventHandler]{
-    param($sender, $eventArgs)
-    $eventArgs.Cancel = $true
-    try {
-        if ($global:listener -and $global:listener.IsListening) {
-            $global:listener.Stop()
-        }
-    } catch {}
-}
-[Console]::add_CancelKeyPress($cancelHandler)
+$consoleHandlerInstalled = [QaDashboard.ConsoleSignal]::Install()
 
 try {
-    while ($global:listener.IsListening) {
+    while ($global:listener.IsListening -and -not [QaDashboard.ConsoleSignal]::StopRequested) {
         $asyncResult = $global:listener.BeginGetContext($null, $null)
 
-        while ($global:listener.IsListening -and -not $asyncResult.AsyncWaitHandle.WaitOne(200)) {
-            # Non-blocking poll every 200ms allows PowerShell to catch Ctrl+C signals immediately
+        while ($global:listener.IsListening -and
+               -not [QaDashboard.ConsoleSignal]::StopRequested -and
+               -not $asyncResult.AsyncWaitHandle.WaitOne(200)) {
+            # Polling keeps Ctrl+C responsive while no HTTP request is arriving.
         }
 
-        if (-not $global:listener.IsListening) {
+        if (-not $global:listener.IsListening -or [QaDashboard.ConsoleSignal]::StopRequested) {
             break
         }
 
@@ -179,9 +221,9 @@ try {
         }
     }
 } finally {
-    try {
-        [Console]::remove_CancelKeyPress($cancelHandler)
-    } catch {}
+    if ($consoleHandlerInstalled) {
+        [QaDashboard.ConsoleSignal]::Remove()
+    }
     if ($global:listener) {
         try {
             $global:listener.Stop()
