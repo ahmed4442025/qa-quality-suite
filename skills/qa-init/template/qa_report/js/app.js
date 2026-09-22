@@ -1,819 +1,595 @@
-/**
- * FieldOps QA Studio - Modern Controller & Filter Engine
- * 100% Offline, Zero Dependency, Safe Architecture
- */
+/* Miyar PM report. Read-only by design; filters never mutate finding data. */
+(function () {
+  "use strict";
 
-// ==========================================
-// 1. Issue Types Configuration & Metadata
-// ==========================================
-const ISSUE_TYPES = {
-  bug: {
-    id: "bug",
-    label: "خطأ برمجي",
-    enLabel: "Bug",
-    icon: "🐛",
-    cssTypeClass: "type-bug"
-  },
-  security: {
-    id: "security",
-    label: "أمان وجلسات",
-    enLabel: "Security",
-    icon: "🔒",
-    cssTypeClass: "type-security"
-  },
-  ux: {
-    id: "ux",
-    label: "تجربة مستخدم",
-    enLabel: "UX",
-    icon: "💡",
-    cssTypeClass: "type-ux"
-  },
-  perf: {
-    id: "perf",
-    label: "أداء وسرعة",
-    enLabel: "Perf",
-    icon: "⚡",
-    cssTypeClass: "type-perf"
-  },
-  ui: {
-    id: "ui",
-    label: "واجهة وتصميم",
-    enLabel: "UI",
-    icon: "🎨",
-    cssTypeClass: "type-ui"
-  },
-  suggest: {
-    id: "suggest",
-    label: "اقتراح تحسين",
-    enLabel: "Suggest",
-    icon: "✨",
-    cssTypeClass: "type-suggest"
-  },
-  refactor: {
-    id: "refactor",
-    label: "معايير وهيكلة",
-    enLabel: "Refactor",
-    icon: "⚙️",
-    cssTypeClass: "type-refactor"
+  const M = window.QAModel;
+  const $ = (id) => document.getElementById(id);
+  const esc = M.escape;
+  const tasks = M.normalize(
+    Object.keys(window)
+      .filter((key) => key.startsWith("MODULE_"))
+      .map((key) => window[key]),
+  );
+  const types = M.typeKeys(tasks);
+  const modules = [...new Map(tasks.map((task) => [task.moduleId, task.moduleName]))];
+  let state = M.fromUrl(location.search, tasks);
+  let filtered = [];
+  let returnFocusKey = "";
+  const collapsedReports = new Set();
+
+  const DRAWER_WIDTH_KEY = "qa_report_drawer_width";
+  const DEFAULT_DRAWER_WIDTH = 760;
+  const MIN_DRAWER_WIDTH = 440;
+  const MAX_DRAWER_WIDTH = 1100;
+  let preferredDrawerWidth = DEFAULT_DRAWER_WIDTH;
+
+  const platformNames = {
+    all: "كل المنصات",
+    Mobile: "الموبايل",
+    Backend: "الخادم",
+    Both: "الموبايل والخادم",
+  };
+  const severityNames = { ...M.SEVERITIES, Priority: "حرجة وعالية" };
+  const statusIcons = {
+    pending: "clock",
+    in_progress: "activity",
+    done: "check",
+    archived: "archive",
+    cancelled: "cancel",
+  };
+  const icons = {
+    search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/>',
+    filter: '<path d="M4 7h16M7 12h10M10 17h4"/>',
+    sort: '<path d="M8 6h10M8 12h7M8 18h4M4 6h.01M4 12h.01M4 18h.01"/>',
+    chevron: '<path d="m7 10 5 5 5-5"/>',
+    close: '<path d="m6 6 12 12M18 6 6 18"/>',
+    arrow: '<path d="M19 12H5m6-6-6 6 6 6"/>',
+    "arrow-right": '<path d="M5 12h14m-6-6 6 6-6 6"/>',
+    moon: '<path d="M20.5 14a8.6 8.6 0 0 1-10.6-10.5A8.8 8.8 0 1 0 20.5 14Z"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',
+    eye: '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/>',
+    layers: '<path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"/>',
+    alert: '<path d="m12 3 10 18H2L12 3Zm0 6v5m0 3h.01"/>',
+    activity: '<path d="M2 12h5l3-8 4 16 3-8h5"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    check: '<path d="m5 12 4 4L19 6"/>',
+    archive: '<path d="M4 7h16v13H4V7Zm-1-4h18v4H3V3Zm7 8h4"/>',
+    cancel: '<circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/>',
+    list: '<path d="M9 6h12M9 12h12M9 18h12M3 6h.01M3 12h.01M3 18h.01"/>',
+    document: '<path d="M14 2H5v20h14V7l-5-5Zm0 0v5h5M8 12h8M8 16h8"/>',
+  };
+
+  function icon(name) {
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.document}</svg>`;
   }
-};
 
-// ==========================================
-// 2. Severity Configuration
-// ==========================================
-const SEVERITY_CONFIG = {
-  Critical: {
-    id: "Critical",
-    label: "حرجة جداً",
-    enLabel: "Critical",
-    cssClass: "sev-critical"
-  },
-  High: {
-    id: "High",
-    label: "عالية",
-    enLabel: "High",
-    cssClass: "sev-high"
-  },
-  Medium: {
-    id: "Medium",
-    label: "متوسطة",
-    enLabel: "Medium",
-    cssClass: "sev-medium"
-  },
-  Low: {
-    id: "Low",
-    label: "منخفضة",
-    enLabel: "Low",
-    cssClass: "sev-low"
+  function fillIcons(root = document) {
+    root.querySelectorAll("[data-icon]").forEach((element) => {
+      element.innerHTML = icon(element.dataset.icon);
+    });
   }
-};
 
-const ALL_TYPE_KEYS = Object.keys(ISSUE_TYPES);
-const ALL_SEVERITY_KEYS = Object.keys(SEVERITY_CONFIG);
-
-// State Management
-let allTasks = [];
-let searchQuery = "";
-let activeModuleFilter = "all";
-let activeTypeFilters = new Set(ALL_TYPE_KEYS);
-let activeSeverityFilters = new Set(ALL_SEVERITY_KEYS);
-
-// Double-click chip debounce timers
-let typeChipTimer = null;
-let lastClickedType = null;
-let sevChipTimer = null;
-let lastClickedSev = null;
-
-// ==========================================
-// 3. Theme Manager (Dark / Light)
-// ==========================================
-const ThemeManager = {
-  THEME_KEY: "fieldops_qa_theme",
-
-  init() {
-    let savedTheme = null;
+  function syncUrl() {
     try {
-      savedTheme = localStorage.getItem(this.THEME_KEY);
-    } catch (e) {
-      console.warn("LocalStorage unavailable", e);
+      const query = M.toUrl(state);
+      history.replaceState(null, "", `${location.pathname}${query ? `?${query}` : ""}${location.hash}`);
+    } catch (_) {
+      /* Local file viewers may disallow history updates. */
     }
+  }
 
-    if (!savedTheme) {
-      const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-      savedTheme = prefersDark ? "dark" : "light";
+  function syncControls() {
+    $("clearSearchBtn").hidden = state.search.length === 0;
+    for (const [id, key] of Object.entries({
+      searchInput: "search",
+      moduleFilter: "module",
+      severityFilter: "severity",
+      culpritFilter: "culprit",
+      sortSelect: "sort",
+      pageSizeSelect: "pageSize",
+    })) {
+      $(id).value = state[key];
     }
+    document.querySelectorAll("[data-status-filter]").forEach((button) => {
+      button.setAttribute("aria-pressed", String(state.statuses.includes(button.dataset.statusFilter)));
+    });
+    document.querySelectorAll("[data-type]").forEach((input) => {
+      input.checked = state.types === null || state.types.includes(input.dataset.type);
+    });
+    document.querySelectorAll("[data-view]").forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.view === state.view));
+    });
+    document.querySelectorAll("[data-preset]").forEach((button) => {
+      const preset = button.dataset.preset;
+      const openSelected =
+        state.statuses.length === 2 &&
+        state.statuses.includes("pending") &&
+        state.statuses.includes("in_progress");
+      const active =
+        preset === "priority"
+          ? openSelected && state.severity === "Priority"
+          : preset === "open"
+            ? openSelected && state.severity === "all"
+            : preset === "all"
+              ? state.statuses.length === 0 && state.severity === "all"
+              : state.statuses.length === 1 && state.statuses[0] === preset && state.severity === "all";
+      button.setAttribute("aria-pressed", String(active));
+    });
+  }
 
-    this.applyTheme(savedTheme);
-
-    const toggleBtn = document.getElementById("themeToggleBtn");
-    if (toggleBtn) {
-      toggleBtn.addEventListener("click", () => this.toggleTheme());
+  function renderStats() {
+    const scoped = M.scope(tasks, state);
+    const stats = M.stats(scoped);
+    const completionStats = M.stats(M.filter(tasks, state));
+    for (const [id, key] of Object.entries({
+      statTotal: "total",
+      statOpen: "open",
+      statPriority: "priority",
+      statDone: "done",
+    })) {
+      $(id).textContent = stats[key];
     }
-  },
+    const percent = completionStats.completionTotal
+      ? Math.round((completionStats.done / completionStats.completionTotal) * 100)
+      : 0;
+    $("completionValue").textContent = `${completionStats.done} / ${completionStats.completionTotal}`;
+    $("completionCaption").textContent = `${completionStats.done} محلولة من ${completionStats.completionTotal} قابلة للإنجاز ضمن الفلاتر الحالية`;
+    $("completionProgress").setAttribute("aria-valuenow", percent);
+    $("completionProgress").setAttribute("aria-valuetext", $("completionCaption").textContent);
+    $("completionProgress").firstElementChild.style.width = `${percent}%`;
+  }
 
-  applyTheme(theme) {
-    const isDark = theme === "dark";
-    if (isDark) {
-      document.documentElement.classList.add("dark");
+  function filterLabels() {
+    const labels = [];
+    if (state.search.trim()) labels.push(["search", `بحث: ${state.search.trim()}`]);
+    if (state.module !== "all") {
+      labels.push(["module", tasks.find((task) => task.moduleId === state.module)?.moduleName || state.module]);
+    }
+    if (state.statuses.length) {
+      labels.push([
+        "statuses",
+        state.statuses.length === 1 ? M.STATUSES[state.statuses[0]] : `${state.statuses.length} حالات محددة`,
+      ]);
+    }
+    if (state.severity !== "all") labels.push(["severity", `الأهمية: ${severityNames[state.severity]}`]);
+    if (state.culprit !== "all") labels.push(["culprit", platformNames[state.culprit]]);
+    if (state.types !== null) {
+      labels.push([
+        "types",
+        !state.types.length
+          ? "لم يتم اختيار نوع"
+          : state.types.length === 1
+            ? M.TYPES[state.types[0]] || state.types[0]
+            : `${state.types.length} أنواع محددة`,
+      ]);
+    }
+    return labels;
+  }
+
+  function renderFilters() {
+    const labels = filterLabels();
+    const resultCount = M.filter(tasks, state).length;
+    $("resultsSummary").textContent = labels.length
+      ? `عرض ${resultCount} من أصل ${tasks.length} مشكلة`
+      : `${tasks.length} مشكلة`;
+    $("activeFiltersBar").hidden = labels.length === 0;
+    $("activeFilters").innerHTML = labels
+      .map(([key, label]) => `<button class="filter-chip" type="button" data-remove-filter="${key}" aria-label="إزالة فلتر ${esc(label)}"><span>${esc(label)}</span>${icon("close")}</button>`)
+      .join("");
+    const advanced = labels.filter(([key]) => !["search", "module", "statuses"].includes(key)).length;
+    $("filterBadge").textContent = advanced;
+    $("filterBadge").hidden = advanced === 0;
+    renderModuleOptions();
+  }
+
+  function renderModuleOptions() {
+    const available = M.filter(tasks, { ...state, module: "all" });
+    const counts = new Map(modules.map(([id]) => [id, 0]));
+    available.forEach((task) => counts.set(task.moduleId, (counts.get(task.moduleId) || 0) + 1));
+    $("moduleFilter").innerHTML =
+      `<option value="all">كل الوحدات (${available.length})</option>` +
+      modules.map(([id, name]) => `<option value="${esc(id)}">${esc(name)} (${counts.get(id) || 0})</option>`).join("");
+  }
+
+  function severity(task) {
+    const key = Object.hasOwn(M.SEVERITIES, task.severity) ? task.severity.toLowerCase() : "unknown";
+    const bars = task.severity === "Low" ? 1 : task.severity === "Medium" ? 2 : 3;
+    return `<span class="severity severity-${key}"><span class="severity-bars" aria-hidden="true">${[1, 2, 3].map((number) => `<i${number > bars ? ' class="inactive"' : ""}></i>`).join("")}</span>${esc(M.SEVERITIES[task.severity] || task.severity || "غير محددة")}</span>`;
+  }
+
+  function statusBadge(task) {
+    const status = Object.hasOwn(M.STATUSES, task.status) ? task.status : "pending";
+    return `<span class="status-badge status-${status}">${icon(statusIcons[status])}<span>${esc(M.STATUSES[status])}</span></span>`;
+  }
+
+  function platform(task) {
+    const value = M.platforms(task);
+    return value.mobile && value.backend
+      ? "الموبايل والخادم"
+      : value.backend
+        ? "الخادم"
+        : value.mobile
+          ? "الموبايل"
+          : "غير محددة";
+  }
+
+  function formatTitle(value) {
+    return esc(value).replace(
+      /\(([A-Za-z][A-Za-z0-9 _./-]*)\)/g,
+      '<bdi class="bidi-term" dir="ltr">($1)</bdi>',
+    );
+  }
+
+  function titleButton(task, context) {
+    return `<button type="button" class="issue-title" data-open-task="${esc(task.id)}" data-focus-key="${esc(`${context}-title-${task.id}`)}">${formatTitle(task.title)}</button>`;
+  }
+
+  function listRow(task, index) {
+    return `<tr class="issue-row" data-open-task="${esc(task.id)}"><td class="issue-index-cell"><span class="issue-index mono">${index}</span></td><td><div class="issue-identity"><bdi class="issue-id">${esc(task.id)}</bdi><span class="issue-types">${task.types.map((key) => esc(M.TYPES[key] || key)).join(" · ")}</span></div>${titleButton(task, "list")}</td><td>${severity(task)}</td><td><bdi class="module-name">${esc(task.moduleName)}</bdi></td><td>${statusBadge(task)}</td></tr>`;
+  }
+
+  function inlineText(value) {
+    return esc(value).replace(/`([^`\n]+)`/g, '<bdi class="inline-label" dir="auto">$1</bdi>');
+  }
+
+  function scenario(value) {
+    if (!value.trim()) return '<p class="muted">لم تُضف تفاصيل التجربة والأثر بعد.</p>';
+    return value
+      .trim()
+      .split("\n")
+      .map((line) => {
+        if (!line.trim()) return '<span class="scenario-break" aria-hidden="true"></span>';
+        const step = line.trim().match(/^(\d+)[.\-)]+\s+(.*)$/);
+        return step
+          ? `<p class="scenario-step"><span class="scenario-number" aria-hidden="true">${esc(step[1])}</span><span>${inlineText(step[2])}</span></p>`
+          : `<p>${inlineText(line.trim())}</p>`;
+      })
+      .join("");
+  }
+
+  function detailSection(content) {
+    return `<section class="detail-section"><h3><span class="section-index" aria-hidden="true">01</span>التجربة والأثر</h3><div class="rich-text">${scenario(content)}</div></section>`;
+  }
+
+  function reportCard(task) {
+    const collapsed = collapsedReports.has(task.id);
+    const toggle = `<button type="button" class="icon-button report-toggle" data-toggle-report="${esc(task.id)}" data-focus-key="report-toggle-${esc(task.id)}" aria-expanded="${!collapsed}" aria-label="${collapsed ? "توسيع" : "طي"} المشكلة ${esc(task.id)}" title="${collapsed ? "عرض التفاصيل" : "طي التفاصيل"}">${icon("chevron")}</button>`;
+    if (collapsed) {
+      return `<article class="report-card is-collapsed"><div class="report-compact-row">${toggle}<div class="report-compact-main"><div class="issue-identity"><bdi class="issue-id">${esc(task.id)}</bdi><span class="issue-types">${task.types.map((key) => esc(M.TYPES[key] || key)).join(" · ")}</span></div>${titleButton(task, "report")}</div><div class="report-compact-severity">${severity(task)}</div><div class="report-compact-module"><bdi class="module-name">${esc(task.moduleName)}</bdi><span class="platform-label">${platform(task)}</span></div><div class="report-compact-status">${statusBadge(task)}</div></div></article>`;
+    }
+    return `<article class="report-card"><header class="report-card-header"><div class="report-topline">${toggle}<bdi class="issue-id">${esc(task.id)}</bdi>${severity(task)}${statusBadge(task)}</div>${titleButton(task, "report")}<div class="platform-label">${esc(task.moduleName)} · ${platform(task)} · ${task.types.map((key) => esc(M.TYPES[key] || key)).join(" · ")}</div></header><div class="report-card-body">${detailSection(task.testScenario)}</div></article>`;
+  }
+
+  function pageTokens(current, pages) {
+    if (pages <= 7) return Array.from({ length: pages }, (_, index) => index + 1);
+    if (current <= 4) return [1, 2, 3, 4, 5, "end-gap", pages];
+    if (current >= pages - 3) return [1, "start-gap", pages - 4, pages - 3, pages - 2, pages - 1, pages];
+    return [1, "start-gap", current - 1, current, current + 1, "end-gap", pages];
+  }
+
+  function renderPageNumbers(page) {
+    $("pageNumbers").innerHTML = pageTokens(page.page, page.pages)
+      .map((token) =>
+        typeof token === "number"
+          ? `<button type="button" class="page-number" data-page="${token}" ${token === page.page ? 'aria-current="page"' : ""} aria-label="الصفحة ${token}">${token}</button>`
+          : '<span class="page-ellipsis" aria-hidden="true">…</span>',
+      )
+      .join("");
+  }
+
+  function renderResults() {
+    filtered = M.sort(M.filter(tasks, state), state.sort);
+    const page = M.paginate(filtered, state.page, state.pageSize);
+    state.page = page.page;
+    if (!filtered.length) {
+      const hasData = tasks.length > 0;
+      $("results").innerHTML = `<div class="empty-state"><span class="empty-symbol">${icon(hasData ? "search" : "layers")}</span><h3>${hasData ? "لا توجد مشاكل تطابق اختياراتك" : "تقرير الجودة جاهز لأول فحص"}</h3><p>${hasData ? "جرّب كلمات بحث أقصر أو أزل بعض الفلاتر لعرض نتائج أكثر." : "ستظهر المشاكل هنا بعد إضافة نتائج تدقيق المشروع."}</p>${hasData ? '<button type="button" class="button primary" data-action="reset">مسح الفلاتر وعرض الكل</button>' : ""}</div>`;
+    } else if (state.view === "report") {
+      $("results").innerHTML = `<div class="report-list">${page.items.map(reportCard).join("")}</div>`;
     } else {
-      document.documentElement.classList.remove("dark");
+      const offset = (page.page - 1) * page.pageSize;
+      $("results").innerHTML = `<table class="issue-table"><caption class="sr-only">مشاكل المشروع، مرتبة حسب الاختيار الحالي</caption><thead><tr><th class="issue-index-heading" scope="col">#</th><th scope="col">المشكلة</th><th scope="col">الأهمية</th><th scope="col">الوحدة</th><th scope="col">الحالة</th></tr></thead><tbody>${page.items.map((task, index) => listRow(task, offset + index + 1)).join("")}</tbody></table>`;
     }
+    $("pagination").hidden = page.total <= M.PAGE_SIZE;
+    $("pageInfo").textContent = `صفحة ${page.page} من ${page.pages}، ${page.pageSize} مشكلة في الصفحة`;
+    renderPageNumbers(page);
+    $("prevPageBtn").disabled = page.page <= 1;
+    $("nextPageBtn").disabled = page.page >= page.pages;
+  }
 
-    const darkIcon = document.getElementById("themeIconDark");
-    const lightIcon = document.getElementById("themeIconLight");
-    const label = document.getElementById("themeToggleLabel");
+  function focusKey(key) {
+    return [...document.querySelectorAll("[data-focus-key]")].find((element) => element.dataset.focusKey === key);
+  }
 
-    if (darkIcon && lightIcon && label) {
-      if (isDark) {
-        darkIcon.style.display = "none";
-        lightIcon.style.display = "block";
-        label.textContent = "الوضع الفاتح";
-      } else {
-        darkIcon.style.display = "block";
-        lightIcon.style.display = "none";
-        label.textContent = "الوضع الداكن";
+  function render() {
+    const focused = document.activeElement;
+    const key = focused?.dataset.focusKey;
+    const removedFilter = focused?.dataset.removeFilter;
+    renderStats();
+    renderFilters();
+    renderResults();
+    syncControls();
+    syncUrl();
+    if ($("taskDialog").open) renderDetail(false);
+    if (key) {
+      const target = focusKey(key);
+      if (target && !target.disabled) target.focus({ preventScroll: true });
+      else if (!$("taskDialog").open) $("resultsHeading").focus({ preventScroll: true });
+    } else if (removedFilter && !focused.isConnected) {
+      $("searchInput").focus({ preventScroll: true });
+    }
+  }
+
+  function changeFilters(patch) {
+    Object.assign(state, patch, { page: 1 });
+    render();
+  }
+
+  function resetFilters() {
+    const { view, sort, pageSize, task } = state;
+    state = { ...M.defaults(), view, sort, pageSize, task };
+    render();
+    $("searchInput").focus({ preventScroll: true });
+  }
+
+  function moduleBadge(task) {
+    return `<span class="module-badge"><span class="module-kicker">الوحدة</span><bdi>${esc(task.moduleName)}</bdi></span>`;
+  }
+
+  function renderDetail(resetScroll) {
+    const task = tasks.find((item) => item.id === state.task);
+    if (!task) return;
+    const content = $("detailContent");
+    const scroll = content.scrollTop;
+    const index = filtered.findIndex((item) => item.id === task.id);
+    $("detailHeaderMeta").innerHTML = `<div class="dialog-id"><bdi class="mono">${esc(task.id)}</bdi></div>${severity(task)}${statusBadge(task)}`;
+    content.innerHTML = `${index < 0 ? '<p class="dialog-note">هذه المشكلة خارج التصفية الحالية. يمكنك متابعة عرضها هنا.</p>' : ""}<h2 class="detail-title" id="detailTitle">${formatTitle(task.title)}</h2><div class="detail-meta">${moduleBadge(task)}<span class="neutral-tag">${platform(task)}</span>${task.types.map((key) => `<span class="neutral-tag">${esc(M.TYPES[key] || key)}</span>`).join("")}</div>${detailSection(task.testScenario)}`;
+    content.scrollTop = resetScroll ? 0 : scroll;
+    $("detailPosition").textContent = index >= 0 ? `${index + 1} من ${filtered.length} في النتائج الحالية` : "خارج النتائج الحالية";
+    $("prevTaskBtn").disabled = index <= 0;
+    $("nextTaskBtn").disabled = index < 0 || index >= filtered.length - 1;
+  }
+
+  function openTask(id, trigger) {
+    if (!tasks.some((task) => task.id === id)) return;
+    state.task = id;
+    if (trigger) returnFocusKey = trigger.dataset.focusKey || "";
+    renderDetail(true);
+    const dialog = $("taskDialog");
+    if (!dialog.open) dialog.showModal();
+    $("closeDetailBtn").focus({ preventScroll: true });
+    syncUrl();
+  }
+
+  function closeTask() {
+    if ($("taskDialog").open) $("taskDialog").close();
+  }
+
+  function moveTask(step) {
+    const index = filtered.findIndex((task) => task.id === state.task);
+    if (index >= 0 && filtered[index + step]) openTask(filtered[index + step].id);
+  }
+
+  function updateThemeButton() {
+    const dark = document.documentElement.dataset.theme === "dark";
+    const label = dark ? "تفعيل الوضع الفاتح" : "تفعيل الوضع الداكن";
+    $("themeToggleBtn").setAttribute("aria-label", label);
+    $("themeToggleBtn").setAttribute("title", label);
+    $("themeToggleBtn").innerHTML = icon(dark ? "sun" : "moon");
+  }
+
+  function closeFilters(restoreFocus = true) {
+    if (!$("filterPanel").open) return;
+    $("filterPanel").open = false;
+    if (restoreFocus) $("filterPanel").querySelector("summary").focus();
+  }
+
+  function drawerLimits() {
+    const max = Math.max(MIN_DRAWER_WIDTH, Math.min(MAX_DRAWER_WIDTH, window.innerWidth - 24));
+    return { min: Math.min(MIN_DRAWER_WIDTH, max), max };
+  }
+
+  function setDrawerWidth(width, persist = false) {
+    const { min, max } = drawerLimits();
+    preferredDrawerWidth = Math.min(max, Math.max(min, Number(width) || DEFAULT_DRAWER_WIDTH));
+    $("taskDialog").style.setProperty("--drawer-width", `${preferredDrawerWidth}px`);
+    $("drawerResizeHandle").setAttribute("aria-valuenow", Math.round(preferredDrawerWidth));
+    if (persist) {
+      try {
+        localStorage.setItem(DRAWER_WIDTH_KEY, String(Math.round(preferredDrawerWidth)));
+      } catch (_) {
+        /* Resizing still works for this session. */
       }
     }
+  }
 
+  function initDrawerResize() {
     try {
-      localStorage.setItem(this.THEME_KEY, theme);
-    } catch (e) {}
-  },
-
-  toggleTheme() {
-    const isCurrentlyDark = document.documentElement.classList.contains("dark");
-    this.applyTheme(isCurrentlyDark ? "light" : "dark");
-  }
-};
-
-// ==========================================
-// 4. Application Bootstrapper
-// ==========================================
-function initApp() {
-  ThemeManager.init();
-  loadTasksFromModules();
-  renderModuleOptions();
-  renderTypeChips();
-  renderSeverityChips();
-  updateDashboard();
-  setupGlobalKeyboardShortcuts();
-}
-
-// ==========================================
-// 5. Load & Normalize Tasks
-// ==========================================
-function loadTasksFromModules() {
-  allTasks = [];
-  const moduleKeys = Object.keys(window).filter(k => k.startsWith("MODULE_"));
-
-  moduleKeys.forEach(k => {
-    const mod = window[k];
-    if (mod && Array.isArray(mod.tasks)) {
-      mod.tasks.forEach(t => {
-        let taskTypes = [];
-        if (Array.isArray(t.types) && t.types.length > 0) {
-          taskTypes = t.types;
-        } else if (typeof t.type === "string" && t.type.trim()) {
-          taskTypes = [t.type.trim()];
-        } else {
-          taskTypes = ["bug"];
-        }
-
-        allTasks.push({
-          ...t,
-          types: taskTypes,
-          severity: t.severity || "Medium",
-          moduleId: mod.moduleId || "general",
-          moduleName: mod.moduleName || "الموديول العام"
-        });
-      });
+      preferredDrawerWidth = Number(localStorage.getItem(DRAWER_WIDTH_KEY)) || DEFAULT_DRAWER_WIDTH;
+    } catch (_) {
+      preferredDrawerWidth = DEFAULT_DRAWER_WIDTH;
     }
-  });
-
-  const headerCountEl = document.getElementById("headerTasksCount");
-  if (headerCountEl) {
-    headerCountEl.textContent = `${allTasks.length} فحص معتمد`;
-  }
-}
-
-// ==========================================
-// 6. Populate Module Options
-// ==========================================
-function renderModuleOptions() {
-  const select = document.getElementById("moduleFilter");
-  if (!select) return;
-
-  const modulesMap = new Map();
-  allTasks.forEach(t => {
-    if (!modulesMap.has(t.moduleId)) {
-      modulesMap.set(t.moduleId, { id: t.moduleId, name: t.moduleName, count: 0 });
-    }
-    modulesMap.get(t.moduleId).count++;
-  });
-
-  const modules = Array.from(modulesMap.values());
-  select.innerHTML = `<option value="all">كل الموديولات (${allTasks.length})</option>` +
-    modules.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)} (${m.count})</option>`).join("");
-}
-
-// ==========================================
-// 7. Render Type Filter Controls
-// ==========================================
-function renderTypeChips() {
-  const container = document.getElementById("typeChipsContainer");
-  if (!container) return;
-
-  const counts = getTypeCounts();
-  const isAllSelected = activeTypeFilters.size === ALL_TYPE_KEYS.length;
-
-  const allChipHtml = `
-    <button type="button" onclick="toggleAllTypes(true)"
-            title="إظهار كل التصنيفات"
-            class="filter-chip ${isAllSelected ? "active" : ""}">
-      <span>الكل</span>
-      <span class="chip-counter">(${allTasks.length})</span>
-    </button>
-  `;
-
-  const typeChipsHtml = ALL_TYPE_KEYS.map(key => {
-    const info = ISSUE_TYPES[key];
-    const isSelected = activeTypeFilters.has(key);
-    const count = counts[key] || 0;
-
-    return `
-      <button type="button"
-              onclick="handleTypeChipClick('${key}', event)"
-              ondblclick="selectOnlyThisType('${key}', event)"
-              title="نقرة: تبديل | نقرتان: حصر هذا النوع"
-              class="filter-chip ${info.cssTypeClass} ${isSelected ? "active" : ""}">
-        <span>${escapeHtml(info.enLabel)}</span>
-        <span class="chip-counter">(${count})</span>
-      </button>
-    `;
-  }).join("");
-
-  container.innerHTML = allChipHtml + typeChipsHtml;
-}
-
-function getTypeCounts() {
-  const counts = {};
-  ALL_TYPE_KEYS.forEach(k => counts[k] = 0);
-  allTasks.forEach(t => {
-    if (Array.isArray(t.types)) {
-      t.types.forEach(typeKey => {
-        if (counts[typeKey] !== undefined) counts[typeKey]++;
-      });
-    }
-  });
-  return counts;
-}
-
-function handleTypeChipClick(typeKey, event) {
-  if (event) event.preventDefault();
-
-  if (typeChipTimer && lastClickedType === typeKey) {
-    clearTimeout(typeChipTimer);
-    typeChipTimer = null;
-    lastClickedType = null;
-    selectOnlyThisType(typeKey);
-  } else {
-    if (typeChipTimer) clearTimeout(typeChipTimer);
-    lastClickedType = typeKey;
-    typeChipTimer = setTimeout(() => {
-      toggleSingleTypeFilter(typeKey);
-      typeChipTimer = null;
-      lastClickedType = null;
-    }, 220);
-  }
-}
-
-function selectOnlyThisType(typeKey, event) {
-  if (event) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-  if (typeChipTimer) {
-    clearTimeout(typeChipTimer);
-    typeChipTimer = null;
-    lastClickedType = null;
-  }
-  activeTypeFilters = new Set([typeKey]);
-  onTypeFilterChange();
-}
-
-function toggleSingleTypeFilter(typeKey) {
-  if (activeTypeFilters.has(typeKey)) {
-    activeTypeFilters.delete(typeKey);
-  } else {
-    activeTypeFilters.add(typeKey);
-  }
-  onTypeFilterChange();
-}
-
-function toggleAllTypes(selectAll) {
-  if (selectAll) {
-    activeTypeFilters = new Set(ALL_TYPE_KEYS);
-  } else {
-    activeTypeFilters.clear();
-  }
-  onTypeFilterChange();
-}
-
-function onTypeFilterChange() {
-  renderTypeChips();
-  updateDashboard();
-}
-
-// ==========================================
-// 8. Render Severity Filter Controls
-// ==========================================
-function renderSeverityChips() {
-  const container = document.getElementById("severityChipsContainer");
-  if (!container) return;
-
-  const counts = getSeverityCounts();
-  const isAllSelected = activeSeverityFilters.size === ALL_SEVERITY_KEYS.length;
-
-  const allChipHtml = `
-    <button type="button" onclick="toggleAllSeverities(true)"
-            title="إظهار كافة مستويات الخطورة"
-            class="filter-chip ${isAllSelected ? "active" : ""}">
-      <span>الكل</span>
-      <span class="chip-counter">(${allTasks.length})</span>
-    </button>
-  `;
-
-  const severityChipsHtml = ALL_SEVERITY_KEYS.map(key => {
-    const info = SEVERITY_CONFIG[key];
-    const isSelected = activeSeverityFilters.has(key);
-    const count = counts[key] || 0;
-
-    return `
-      <button type="button"
-              onclick="handleSeverityChipClick('${key}', event)"
-              ondblclick="selectOnlyThisSeverity('${key}', event)"
-              title="نقرة: تبديل | نقرتان: حصر هذا المستوى"
-              class="filter-chip ${info.cssClass} ${isSelected ? "active" : ""}">
-        <span class="sev-badge-dot"></span>
-        <span>${escapeHtml(info.label)}</span>
-        <span class="chip-counter">(${count})</span>
-      </button>
-    `;
-  }).join("");
-
-  container.innerHTML = allChipHtml + severityChipsHtml;
-}
-
-function getSeverityCounts() {
-  const counts = {};
-  ALL_SEVERITY_KEYS.forEach(k => counts[k] = 0);
-  allTasks.forEach(t => {
-    const sev = t.severity || "Medium";
-    if (counts[sev] !== undefined) counts[sev]++;
-  });
-  return counts;
-}
-
-function handleSeverityChipClick(sevKey, event) {
-  if (event) event.preventDefault();
-
-  if (sevChipTimer && lastClickedSev === sevKey) {
-    clearTimeout(sevChipTimer);
-    sevChipTimer = null;
-    lastClickedSev = null;
-    selectOnlyThisSeverity(sevKey);
-  } else {
-    if (sevChipTimer) clearTimeout(sevChipTimer);
-    lastClickedSev = sevKey;
-    sevChipTimer = setTimeout(() => {
-      toggleSingleSeverityFilter(sevKey);
-      sevChipTimer = null;
-      lastClickedSev = null;
-    }, 220);
-  }
-}
-
-function selectOnlyThisSeverity(sevKey, event) {
-  if (event) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-  if (sevChipTimer) {
-    clearTimeout(sevChipTimer);
-    sevChipTimer = null;
-    lastClickedSev = null;
-  }
-  activeSeverityFilters = new Set([sevKey]);
-  onSeverityFilterChange();
-}
-
-function toggleSingleSeverityFilter(sevKey) {
-  if (activeSeverityFilters.has(sevKey)) {
-    activeSeverityFilters.delete(sevKey);
-  } else {
-    activeSeverityFilters.add(sevKey);
-  }
-  onSeverityFilterChange();
-}
-
-function toggleAllSeverities(selectAll) {
-  if (selectAll) {
-    activeSeverityFilters = new Set(ALL_SEVERITY_KEYS);
-  } else {
-    activeSeverityFilters.clear();
-  }
-  onSeverityFilterChange();
-}
-
-function onSeverityFilterChange() {
-  renderSeverityChips();
-  updateDashboard();
-}
-
-// ==========================================
-// 9. Reset All Filters
-// ==========================================
-function resetAllFilters() {
-  searchQuery = "";
-  const searchInput = document.getElementById("searchInput");
-  if (searchInput) searchInput.value = "";
-
-  const searchClearBtn = document.getElementById("searchClearBtn");
-  if (searchClearBtn) searchClearBtn.style.display = "none";
-
-  activeModuleFilter = "all";
-  const moduleSelect = document.getElementById("moduleFilter");
-  if (moduleSelect) moduleSelect.value = "all";
-
-  activeTypeFilters = new Set(ALL_TYPE_KEYS);
-  activeSeverityFilters = new Set(ALL_SEVERITY_KEYS);
-
-  renderTypeChips();
-  renderSeverityChips();
-  updateDashboard();
-  showToast("تمت استعادة كافة الفلاتر الافتراضية");
-}
-
-// ==========================================
-// 10. Filter Engine
-// ==========================================
-function getFilteredTasks() {
-  return allTasks.filter(t => {
-    // 1. Module
-    if (activeModuleFilter !== "all" && t.moduleId !== activeModuleFilter) {
-      return false;
-    }
-
-    // 2. Severity
-    if (activeSeverityFilters.size === 0) return false;
-    const taskSev = t.severity || "Medium";
-    if (!activeSeverityFilters.has(taskSev)) return false;
-
-    // 3. Types
-    if (activeTypeFilters.size === 0) return false;
-    if (activeTypeFilters.size < ALL_TYPE_KEYS.length) {
-      const taskTypes = t.types || [];
-      const matchType = taskTypes.some(k => activeTypeFilters.has(k));
-      if (!matchType) return false;
-    }
-
-    // 4. Search query
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const match =
-        (t.id && t.id.toLowerCase().includes(q)) ||
-        (t.title && t.title.toLowerCase().includes(q)) ||
-        (t.testScenario && t.testScenario.toLowerCase().includes(q)) ||
-        (t.severity && t.severity.toLowerCase().includes(q)) ||
-        (t.types && t.types.some(k => {
-          const info = ISSUE_TYPES[k];
-          return k.toLowerCase().includes(q) ||
-                 (info && (info.label.toLowerCase().includes(q) || info.enLabel.toLowerCase().includes(q)));
-        }));
-      if (!match) return false;
-    }
-
-    return true;
-  });
-}
-
-// ==========================================
-// 11. Render Presentation Table Rows
-// ==========================================
-function updateDashboard() {
-  const tbody = document.getElementById("taskTableBody");
-  const countEl = document.getElementById("filteredCount");
-  const filtered = getFilteredTasks();
-
-  if (countEl) {
-    countEl.textContent = `${filtered.length} من ${allTasks.length} فحص`;
-  }
-
-  if (!tbody) return;
-
-  if (filtered.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="6">
-          <div class="empty-state">
-            <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              <line x1="8" y1="11" x2="14" y2="11"></line>
-            </svg>
-            <div class="empty-state-title">لا توجد فحوصات مطابقة للبحث أو التصفية</div>
-            <div class="empty-state-desc">جرب تعديل كلمات البحث أو تفعيل خيارات الفلاتر بالأعلى</div>
-          </div>
-        </td>
-      </tr>`;
-    return;
-  }
-
-  tbody.innerHTML = filtered.map((t, index) => {
-    const sev = SEVERITY_CONFIG[t.severity] || {
-      label: t.severity || "عادية",
-      enLabel: t.severity || "Normal",
-      cssClass: "sev-medium"
+    setDrawerWidth(preferredDrawerWidth);
+    const handle = $("drawerResizeHandle");
+    let dragging = false;
+    handle.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      handle.setPointerCapture?.(event.pointerId);
+      document.body.classList.add("is-resizing-drawer");
+    });
+    handle.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+      setDrawerWidth(window.innerWidth - event.clientX);
+    });
+    const finish = () => {
+      if (!dragging) return;
+      dragging = false;
+      document.body.classList.remove("is-resizing-drawer");
+      setDrawerWidth(preferredDrawerWidth, true);
     };
+    handle.addEventListener("pointerup", finish);
+    handle.addEventListener("pointercancel", finish);
+    handle.addEventListener("dblclick", () => setDrawerWidth(DEFAULT_DRAWER_WIDTH, true));
+    handle.addEventListener("keydown", (event) => {
+      const { min, max } = drawerLimits();
+      let next = preferredDrawerWidth;
+      if (event.key === "ArrowLeft") next += 24;
+      else if (event.key === "ArrowRight") next -= 24;
+      else if (event.key === "Home") next = min;
+      else if (event.key === "End") next = max;
+      else return;
+      event.preventDefault();
+      setDrawerWidth(next, true);
+    });
+    window.addEventListener("resize", () => setDrawerWidth(preferredDrawerWidth));
+  }
 
-    const typeBadges = (t.types || []).map(typeKey => {
-      const info = ISSUE_TYPES[typeKey] || {
-        label: typeKey,
-        enLabel: typeKey
-      };
-      return `
-        <span class="category-tag tag-${typeKey}" title="${escapeHtml(info.label)}">
-          <span>${escapeHtml(info.enLabel)}</span>
-        </span>`;
-    }).join("");
+  $("typeOptions").innerHTML = types
+    .map((key) => `<label class="type-option"><input type="checkbox" data-type="${esc(key)}" checked><span>${esc(M.TYPES[key] || key)}</span></label>`)
+    .join("");
 
-    return `
-      <tr>
-        <!-- 0. Index -->
-        <td class="td-index">${index + 1}</td>
+  const projectName = $("projectName").textContent.trim();
+  if (!projectName || projectName.includes("{{PROJECT_NAME}}")) {
+    $("projectName").textContent = "قالب تجريبي";
+    document.title = "مِعيار — قالب تقرير الجودة";
+    $("dataNote").textContent = "بيانات توضيحية · تقرير للعرض فقط";
+  }
 
-        <!-- 1. Task ID -->
-        <td class="td-id">
-          <button type="button" class="task-id-chip" onclick="copyToClipboard('${escapeJs(t.id)}', 'تم نسخ كود الفحص')" title="انقر لنسخ الكود">
-            <span>#${escapeHtml(t.id)}</span>
-          </button>
-        </td>
+  fillIcons();
+  updateThemeButton();
+  initDrawerResize();
+  render();
+  if (state.task) openTask(state.task);
 
-        <!-- 2. Severity -->
-        <td class="td-severity">
-          <span class="sev-badge ${sev.cssClass}">
-            <span class="sev-badge-dot"></span>
-            <span>${escapeHtml(sev.label)}</span>
-          </span>
-        </td>
-
-        <!-- 3. Title (المشكلة مع تمييز المصطلحات التقنية لمنع اللخبطة البصرية) -->
-        <td class="td-title">
-          <div class="task-title-text">${formatMixedTitle(t.title)}</div>
-        </td>
-
-        <!-- 4. Category Badges -->
-        <td class="td-types">
-          <div class="types-badge-container">
-            ${typeBadges}
-          </div>
-        </td>
-
-        <!-- 5. Test Scenario & Steps -->
-        <td class="td-scenario">
-          <div class="scenario-flat-list">
-            ${renderScenarioSteps(t.testScenario)}
-          </div>
-        </td>
-      </tr>
-    `;
-  }).join("");
-}
-
-// ==========================================
-// 12. Smart BiDi Mixed Title Formatter
-// ==========================================
-function formatMixedTitle(rawTitle) {
-  if (!rawTitle) return "";
-  let text = escapeHtml(rawTitle);
-
-  // 1. Backticks: `code`
-  text = text.replace(/`([^`]+)`/g, '<bdi class="tech-text">$1</bdi>');
-
-  // 2. Parenthesized English/technical phrases: (Remember Me) -> <bdi class="tech-text">($1)</bdi>
-  text = text.replace(/\(([A-Za-z0-9_#\-\.\/\s]+)\)/g, '<bdi class="tech-text">($1)</bdi>');
-
-  // 3. Standalone English words & phrases (e.g. Network Layer, Interceptors, 401 Unauthorized, CancelToken)
-  text = text.replace(/(?<!<[^>]*)\b([A-Za-z][A-Za-z0-9_\-\.\/]*(?:\s+[A-Za-z0-9_\-\.\/]+)*)\b(?![^<]*>)/g, (match) => {
-    return `<bdi class="tech-text">${match}</bdi>`;
+  $("searchInput").addEventListener("input", (event) => changeFilters({ search: event.target.value }));
+  $("clearSearchBtn").addEventListener("click", () => {
+    changeFilters({ search: "" });
+    $("searchInput").focus({ preventScroll: true });
+  });
+  for (const [id, key] of Object.entries({
+    moduleFilter: "module",
+    severityFilter: "severity",
+    culpritFilter: "culprit",
+    sortSelect: "sort",
+  })) {
+    $(id).addEventListener("change", (event) => changeFilters({ [key]: event.target.value }));
+  }
+  $("pageSizeSelect").addEventListener("change", (event) => changeFilters({ pageSize: Number(event.target.value) }));
+  $("typeOptions").addEventListener("change", () => {
+    const selected = [...$("typeOptions").querySelectorAll("input:checked")].map((input) => input.dataset.type);
+    changeFilters({ types: selected.length === types.length ? null : selected });
+  });
+  $("allTypesBtn").addEventListener("click", () => changeFilters({ types: null }));
+  $("noTypesBtn").addEventListener("click", () => changeFilters({ types: [] }));
+  $("closeFiltersBtn").addEventListener("click", () => closeFilters());
+  $("themeToggleBtn").addEventListener("click", () => {
+    const theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem("qa_theme", theme);
+    } catch (_) {
+      /* Theme still applies for this session. */
+    }
+    updateThemeButton();
+  });
+  for (const [id, step] of [["prevPageBtn", -1], ["nextPageBtn", 1]]) {
+    $(id).addEventListener("click", () => {
+      state.page += step;
+      render();
+      $("resultsHeading").focus({ preventScroll: true });
+      $("resultsHeading").scrollIntoView({ block: "start", behavior: "auto" });
+    });
+  }
+  $("closeDetailBtn").addEventListener("click", closeTask);
+  $("prevTaskBtn").addEventListener("click", () => moveTask(-1));
+  $("nextTaskBtn").addEventListener("click", () => moveTask(1));
+  $("taskDialog").addEventListener("close", () => {
+    state.task = "";
+    syncUrl();
+    (focusKey(returnFocusKey) || $("resultsHeading")).focus({ preventScroll: true });
+  });
+  $("taskDialog").addEventListener("click", (event) => {
+    if (event.target !== $("taskDialog")) return;
+    const rect = $("taskDialog").getBoundingClientRect();
+    if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) closeTask();
   });
 
-  return text;
-}
-
-// ==========================================
-// 13. Parse & Render Scenario Steps
-// ==========================================
-function renderScenarioSteps(rawText) {
-  if (!rawText) return "";
-
-  const lines = rawText.split("\n");
-  let formattedHtml = "";
-  let inCodeBlock = false;
-  let codeBuffer = [];
-
-  lines.forEach(line => {
-    const trimmed = line.trim();
-
-    // Code Block Delimiter
-    if (trimmed.startsWith("```")) {
-      if (inCodeBlock) {
-        inCodeBlock = false;
-        formattedHtml += `<pre class="code-block"><code>${escapeHtml(codeBuffer.join("\n"))}</code></pre>`;
-        codeBuffer = [];
-      } else {
-        inCodeBlock = true;
-        codeBuffer = [];
+  document.addEventListener("click", (event) => {
+    const button = event.target.closest("button");
+    if (!$("filterPanel").contains(event.target)) closeFilters(false);
+    if (button) {
+      if (button.dataset.toggleReport !== undefined) {
+        const id = button.dataset.toggleReport;
+        if (collapsedReports.has(id)) collapsedReports.delete(id);
+        else collapsedReports.add(id);
+        render();
+      } else if (button.dataset.page !== undefined) {
+        state.page = Number(button.dataset.page);
+        render();
+        $("resultsHeading").focus({ preventScroll: true });
+        $("resultsHeading").scrollIntoView({ block: "start", behavior: "auto" });
+      } else if (button.dataset.statusFilter !== undefined) {
+        const selected = button.dataset.statusFilter;
+        changeFilters({
+          statuses: state.statuses.includes(selected)
+            ? state.statuses.filter((status) => status !== selected)
+            : [...state.statuses, selected],
+        });
+      } else if (button.dataset.openTask !== undefined) {
+        openTask(button.dataset.openTask, button);
+      } else if (button.dataset.action === "reset") {
+        resetFilters();
+      } else if (button.dataset.removeFilter) {
+        changeFilters({ [button.dataset.removeFilter]: M.defaults()[button.dataset.removeFilter] });
+      } else if (button.dataset.view) {
+        state.view = button.dataset.view;
+        render();
+      } else if (button.dataset.preset) {
+        const preset = button.dataset.preset;
+        const active = button.getAttribute("aria-pressed") === "true";
+        changeFilters({
+          statuses: active
+            ? []
+            : preset === "priority" || preset === "open"
+              ? ["pending", "in_progress"]
+              : preset === "all"
+                ? []
+                : [preset],
+          severity: !active && preset === "priority" ? "Priority" : "all",
+          search: "",
+          types: null,
+        });
       }
       return;
     }
-
-    if (inCodeBlock) {
-      codeBuffer.push(line);
-      return;
-    }
-
-    if (!trimmed) return;
-
-    // Check if line starts with numbered step: "1. ", "2. ", etc.
-    const stepMatch = trimmed.match(/^(\d+)[\.\-\)]\s+(.*)/);
-    if (stepMatch) {
-      const stepNum = stepMatch[1];
-      const stepContent = formatInlineCode(stepMatch[2]);
-      formattedHtml += `
-        <div class="scenario-step-line">
-          <span class="step-num-text">${stepNum}.</span>
-          <div class="step-body-text">${stepContent}</div>
-        </div>
-      `;
-    } else {
-      formattedHtml += `<div style="margin-bottom:0.35rem;">${formatInlineCode(trimmed)}</div>`;
-    }
+    const row = event.target.closest(".issue-row[data-open-task]");
+    if (row) openTask(row.dataset.openTask, row.querySelector(".issue-title"));
   });
 
-  if (inCodeBlock && codeBuffer.length > 0) {
-    formattedHtml += `<pre class="code-block"><code>${escapeHtml(codeBuffer.join("\n"))}</code></pre>`;
-  }
-
-  return formattedHtml;
-}
-
-function formatInlineCode(text) {
-  if (!text) return "";
-  let sanitized = escapeHtml(text);
-  return sanitized.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
-}
-
-// ==========================================
-// 14. Copy to Clipboard & Toast Helper
-// ==========================================
-function copyToClipboard(text, customMessage) {
-  if (!text) return;
-
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(text).then(() => {
-      showToast(customMessage || "تم النسخ إلى الحافظة بنجاح");
-    }).catch(() => fallbackCopy(text, customMessage));
-  } else {
-    fallbackCopy(text, customMessage);
-  }
-}
-
-function fallbackCopy(text, customMessage) {
-  const textArea = document.createElement("textarea");
-  textArea.value = text;
-  textArea.style.position = "fixed";
-  textArea.style.opacity = "0";
-  document.body.appendChild(textArea);
-  textArea.focus();
-  textArea.select();
-  try {
-    document.execCommand("copy");
-    showToast(customMessage || "تم النسخ إلى الحافظة بنجاح");
-  } catch (err) {
-    console.error("Copy failed", err);
-  }
-  document.body.removeChild(textArea);
-}
-
-let toastTimer = null;
-function showToast(message) {
-  const toast = document.getElementById("appToast");
-  const toastMsg = document.getElementById("toastMessage");
-  if (!toast || !toastMsg) return;
-
-  toastMsg.textContent = message;
-  toast.classList.add("show");
-
-  if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => {
-    toast.classList.remove("show");
-  }, 2200);
-}
-
-// ==========================================
-// 15. HTML Safety Helpers
-// ==========================================
-function escapeHtml(str) {
-  if (!str) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function escapeJs(str) {
-  if (!str) return "";
-  return String(str).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-}
-
-// ==========================================
-// 16. Global Keyboard Shortcuts & Events
-// ==========================================
-function setupGlobalKeyboardShortcuts() {
-  document.addEventListener("keydown", (e) => {
-    // Focus search on '/' when not in input
-    if (e.key === "/" && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA") {
-      e.preventDefault();
-      const searchInput = document.getElementById("searchInput");
-      if (searchInput) {
-        searchInput.focus();
-        searchInput.select();
-      }
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && $("filterPanel").open && !$("taskDialog").open) {
+      event.preventDefault();
+      closeFilters();
+    }
+    if (
+      event.key === "/" &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey &&
+      !$("taskDialog").open &&
+      !event.target.matches("input,textarea,select") &&
+      !event.target.isContentEditable
+    ) {
+      event.preventDefault();
+      $("searchInput").focus();
     }
   });
-}
 
-// ==========================================
-// 17. Event Listeners Setup
-// ==========================================
-document.addEventListener("DOMContentLoaded", () => {
-  initApp();
-
-  // Search input
-  const searchInput = document.getElementById("searchInput");
-  const searchClearBtn = document.getElementById("searchClearBtn");
-
-  if (searchInput) {
-    searchInput.addEventListener("input", (e) => {
-      searchQuery = e.target.value;
-      if (searchClearBtn) {
-        searchClearBtn.style.display = searchQuery ? "block" : "none";
-      }
-      updateDashboard();
-    });
-  }
-
-  if (searchClearBtn) {
-    searchClearBtn.addEventListener("click", () => {
-      if (searchInput) {
-        searchInput.value = "";
-        searchQuery = "";
-        searchClearBtn.style.display = "none";
-        searchInput.focus();
-        updateDashboard();
-      }
-    });
-  }
-
-  // Module filter
-  document.getElementById("moduleFilter")?.addEventListener("change", (e) => {
-    activeModuleFilter = e.target.value;
-    updateDashboard();
+  window.addEventListener("popstate", () => {
+    const next = M.fromUrl(location.search, tasks);
+    if (!next.task && $("taskDialog").open) closeTask();
+    state = next;
+    render();
+    if (state.task) openTask(state.task);
   });
-
-  // Reset Filters
-  document.getElementById("resetFiltersBtn")?.addEventListener("click", () => resetAllFilters());
-});
+})();

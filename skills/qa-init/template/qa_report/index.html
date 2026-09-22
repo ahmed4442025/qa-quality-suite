@@ -1,160 +1,140 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>تقرير تدقيق الجودة | {{PROJECT_NAME}}</title>
-  
-  <!-- Local Stylesheet (100% Offline & Safe) -->
-  <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-
-  <!-- Top Application Bar -->
-  <header class="app-header">
-    <div class="container">
-      <div class="header-content">
-        
-        <!-- Brand & Title -->
-        <div class="brand-section">
-          <div class="brand-logo">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 11l3 3L22 4"></path>
-              <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
-            </svg>
-          </div>
-          <h1 class="brand-title">تقرير تدقيق الجودة — {{PROJECT_NAME}}</h1>
-        </div>
-
-        <!-- Header Actions & Controls -->
-        <div class="header-actions">
-          
-          <!-- Status Indicator -->
-          <div class="stats-badge">
-            <span class="stats-dot"></span>
-            <span id="headerTasksCount">11 فحص معتمد</span>
-          </div>
-
-          <!-- Theme Switcher -->
-          <button id="themeToggleBtn" type="button" class="theme-toggle-btn" title="تبديل الوضع (داكن / فاتح)">
-            <svg id="themeIconDark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-            </svg>
-            <svg id="themeIconLight" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="5"></circle>
-              <line x1="12" y1="1" x2="12" y2="3"></line>
-              <line x1="12" y1="21" x2="12" y2="23"></line>
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-              <line x1="1" y1="12" x2="3" y2="12"></line>
-              <line x1="21" y1="12" x2="23" y2="12"></line>
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-            </svg>
-            <span id="themeToggleLabel">الوضع الداكن</span>
-          </button>
-
-        </div>
-
-      </div>
-    </div>
-  </header>
-
-  <!-- Main View Area -->
-  <main class="container">
-
-    <!-- Filter Control Card (Streamlined, No Redundant Dropdown) -->
-    <div class="filter-card">
-      
-      <!-- Top Row: Search & Module Filter -->
-      <div class="filter-row-top">
-        
-        <!-- Live Instant Search -->
-        <div class="search-box-wrapper">
-          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f1f5f9" />
+    <title>مِعيار — تقرير الجودة | {{PROJECT_NAME}}</title>
+    <script>
+      try {
+        var preference = localStorage.getItem("qa_theme");
+        document.documentElement.dataset.theme =
+          preference ||
+          (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      } catch (_) {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
+    <link rel="stylesheet" href="css/fonts.css" />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="js/model.js" defer></script>
+    <script src="js/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#resultsHeading">انتقل إلى المشاكل</a>
+    <header class="app-header">
+      <div class="header-inner">
+        <a class="brand" href="index.html" aria-label="مِعيار — تقرير الجودة">
+          <svg class="brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+            <path d="M7 14V7h7M26 7h7v7M33 26v7h-7M14 33H7v-7" stroke="currentColor" stroke-width="2" />
+            <path d="m12 20 5 5 11-11" stroke="currentColor" stroke-width="2.5" />
           </svg>
-          <input type="text" id="searchInput" class="search-input" placeholder="بحث سريع برقم الفحص، العنوان، أو سيناريو التجربة...">
-          <button type="button" id="searchClearBtn" class="search-clear-btn" title="مسح البحث">✕</button>
+          <span class="brand-name">مِعيار<span class="brand-caption">تقرير الجودة</span></span>
+        </a>
+        <div class="project-context">
+          <span class="context-label">مساحة المشروع</span>
+          <span id="projectName" class="project-name" dir="auto">{{PROJECT_NAME}}</span>
         </div>
-
-        <!-- Module Selector -->
-        <div>
-          <select id="moduleFilter" class="custom-select" style="width: 100%;">
-            <option value="all">كل الموديولات</option>
-          </select>
+        <div class="header-actions">
+          <span class="readonly-badge"><span data-icon="eye"></span>للعرض فقط</span>
+          <span class="header-divider" aria-hidden="true"></span>
+          <button type="button" class="icon-button" id="themeToggleBtn" aria-label="تفعيل الوضع الداكن" title="تفعيل الوضع الداكن"><span data-icon="moon"></span></button>
         </div>
-
       </div>
+    </header>
 
-      <!-- Severity Filter Strip (Right-Aligned next to label) -->
-      <div class="filter-row-section">
-        <div class="filter-group-right">
-          <span class="filter-section-title">مستوى الخطورة:</span>
-          <div id="severityChipsContainer" class="chip-group">
-            <!-- Rendered dynamically -->
+    <main class="workspace" id="mainContent">
+      <section class="metrics" aria-label="ملخص الجودة — اضغط لتصفية المشاكل">
+        <button type="button" class="metric metric-open" data-preset="open" aria-pressed="false"><span class="metric-top">مشاكل مفتوحة<span data-icon="layers"></span></span><span class="metric-value mono" id="statOpen">0</span></button>
+        <button type="button" class="metric metric-priority" data-preset="priority" aria-pressed="false" aria-label="المشاكل المفتوحة الحرجة والعالية"><span class="metric-top">حرجة وعالية<span data-icon="alert"></span></span><span class="metric-value mono" id="statPriority">0</span></button>
+        <button type="button" class="metric metric-done" data-preset="done" aria-pressed="false"><span class="metric-top">تم الحل<span data-icon="check"></span></span><span class="metric-value mono" id="statDone">0</span></button>
+        <button type="button" class="metric metric-total" data-preset="all" aria-pressed="false"><span class="metric-top">إجمالي المشاكل<span data-icon="layers"></span></span><span class="metric-value mono" id="statTotal">0</span></button>
+      </section>
+
+      <section class="issues-section" aria-labelledby="resultsHeading">
+        <h2 id="resultsHeading" class="sr-only" tabindex="-1">مشاكل المشروع</h2>
+        <div class="section-header">
+          <div class="completion-compact">
+            <span class="completion-label-short">تم الحل</span>
+            <div class="progress-track" role="progressbar" aria-label="نسبة الإنجاز ضمن الفلاتر الحالية" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="completionProgress"><span></span></div>
+            <span class="mono" id="completionValue">0 / 0</span>
+            <span id="completionCaption" class="sr-only">نسبة الإنجاز ضمن الفلاتر الحالية</span>
+          </div>
+          <div class="view-switch" role="group" aria-label="طريقة عرض المشاكل">
+            <button type="button" data-view="list" aria-pressed="true"><span data-icon="list"></span>القائمة</button>
+            <button type="button" data-view="report" aria-pressed="false"><span data-icon="document"></span>التفاصيل</button>
           </div>
         </div>
-      </div>
 
-      <!-- Category / Type Filter Strip (Single Unified Source of Truth) -->
-      <div class="filter-row-section">
-        <div class="filter-group-right">
-          <span class="filter-section-title">تصنيف المشكلة:</span>
-          <div id="typeChipsContainer" class="chip-group">
-            <!-- Rendered dynamically -->
+        <div class="workbench">
+          <div class="filter-toolbar">
+            <div class="search-field">
+              <span data-icon="search"></span>
+              <label class="sr-only" for="searchInput">البحث في عنوان المشكلة وكودها وسيناريو التجربة</label>
+              <input id="searchInput" type="search" placeholder="ابحث بالعنوان، كود المشكلة، أو سيناريو التجربة…" autocomplete="off" />
+              <kbd aria-hidden="true">/</kbd>
+              <button type="button" class="icon-button search-clear" id="clearSearchBtn" aria-label="مسح البحث" title="مسح البحث" hidden><span data-icon="close"></span></button>
+            </div>
+            <div class="module-field">
+              <label class="sr-only" for="moduleFilter">الوحدة</label>
+              <select id="moduleFilter"><option value="all">كل الوحدات</option></select>
+            </div>
+            <div class="status-filter-group" role="group" aria-label="تصفية حسب الحالة، يمكن اختيار أكثر من حالة">
+              <button type="button" data-status-filter="pending" aria-pressed="false" aria-label="تصفية بقيد الانتظار" title="قيد الانتظار"><span data-icon="clock"></span></button>
+              <button type="button" data-status-filter="in_progress" aria-pressed="false" aria-label="تصفية بجاري العمل" title="جاري العمل"><span data-icon="activity"></span></button>
+              <button type="button" data-status-filter="done" aria-pressed="false" aria-label="تصفية بتم الحل" title="تم الحل"><span data-icon="check"></span></button>
+              <button type="button" data-status-filter="archived" aria-pressed="false" aria-label="تصفية بالمؤرشف" title="مؤرشف"><span data-icon="archive"></span></button>
+              <button type="button" data-status-filter="cancelled" aria-pressed="false" aria-label="تصفية بالملغي" title="ملغي"><span data-icon="cancel"></span></button>
+            </div>
+            <details class="advanced-filters" id="filterPanel">
+              <summary><span data-icon="filter"></span>الفلاتر<span id="filterBadge" class="filter-badge" hidden>0</span><span data-icon="chevron"></span></summary>
+              <div class="filter-popover">
+                <div class="popover-heading"><strong>خصص النتائج</strong><button type="button" id="closeFiltersBtn" class="icon-button" aria-label="إغلاق الفلاتر"><span data-icon="close"></span></button></div>
+                <div class="filter-fields">
+                  <div class="field"><label for="severityFilter">الأهمية</label><select id="severityFilter"><option value="all">كل المستويات</option><option value="Critical">حرجة</option><option value="High">عالية</option><option value="Priority">حرجة وعالية</option><option value="Medium">متوسطة</option><option value="Low">منخفضة</option></select></div>
+                  <div class="field"><label for="culpritFilter">المنصة المتأثرة</label><select id="culpritFilter"><option value="all">كل المنصات</option><option value="Mobile">تطبيق الموبايل</option><option value="Backend">الخادم</option><option value="Both">الموبايل والخادم معًا</option></select></div>
+                </div>
+                <fieldset class="type-fieldset">
+                  <legend>نوع المشكلة</legend>
+                  <div class="type-options" id="typeOptions"></div>
+                  <div class="type-actions"><button type="button" class="text-button" id="allTypesBtn">اختيار الكل</button><button type="button" class="text-button" id="noTypesBtn">إلغاء الاختيار</button></div>
+                </fieldset>
+              </div>
+            </details>
+            <div class="sort-field">
+              <span data-icon="sort" aria-hidden="true"></span>
+              <label class="sr-only" for="sortSelect">ترتيب المشاكل</label>
+              <select id="sortSelect" aria-label="ترتيب المشاكل"><option value="priority">الأعلى أهمية</option><option value="status">الحالة</option><option value="id">كود المشكلة</option></select>
+            </div>
+          </div>
+
+          <div class="results-context">
+            <strong id="resultsSummary" class="results-summary" role="status" aria-live="polite">0 مشكلة</strong>
+            <div class="active-filters" id="activeFiltersBar" hidden><span class="muted">النتائج حسب:</span><div id="activeFilters" class="filter-chips"></div><button type="button" class="text-button reset-button" data-action="reset">مسح الفلاتر</button></div>
+          </div>
+          <div id="results"></div>
+          <div class="pagination" id="pagination" hidden>
+            <div class="page-size-field"><label for="pageSizeSelect">عرض</label><select id="pageSizeSelect" aria-label="عدد المشاكل في الصفحة"><option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="200">200</option></select><span>مشكلة</span></div>
+            <nav class="pagination-actions" aria-label="صفحات المشاكل"><button type="button" class="page-arrow" id="prevPageBtn" aria-label="الصفحة السابقة"><span data-icon="arrow-right"></span></button><div class="page-numbers" id="pageNumbers"></div><button type="button" class="page-arrow" id="nextPageBtn" aria-label="الصفحة التالية"><span data-icon="arrow"></span></button></nav>
+            <span id="pageInfo" class="sr-only" role="status" aria-live="polite"></span>
           </div>
         </div>
-        <div class="filter-group-left">
-          <span id="filteredCount" class="counter-text">0 من 0 فحص</span>
-          <button type="button" id="resetFiltersBtn" class="filter-reset-link">
-            <svg style="width: 13px; height: 13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
-              <path d="M21 3v5h-5"></path>
-              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
-              <path d="M3 21v-5h5"></path>
-            </svg>
-            <span>إعادة ضبط</span>
-          </button>
-        </div>
+      </section>
+
+      <footer class="workspace-footer"><span class="footer-brand">مِعيار<span class="footer-separator">/</span>كل تفصيلة تصنع فرقًا.</span><span id="dataNote">تقرير مبسط للعرض فقط</span></footer>
+      <noscript><div class="notice">فعّل JavaScript لعرض تقرير الجودة.</div></noscript>
+    </main>
+
+    <dialog id="taskDialog" class="task-dialog" aria-labelledby="detailTitle">
+      <div class="drawer-resize-handle" id="drawerResizeHandle" role="separator" aria-label="تغيير عرض لوحة التفاصيل" aria-orientation="vertical" aria-valuemin="440" aria-valuemax="1100" aria-valuenow="760" aria-controls="detailContent" tabindex="0" title="اسحب لتغيير العرض · نقرتان لإعادة الضبط"></div>
+      <div class="dialog-shell">
+        <header class="dialog-header"><div class="dialog-heading-row" id="detailHeaderMeta"></div><button type="button" class="icon-button" id="closeDetailBtn" aria-label="إغلاق تفاصيل المشكلة" autofocus><span data-icon="close"></span></button></header>
+        <div class="dialog-content" id="detailContent"></div>
+        <footer class="dialog-footer"><span id="detailPosition" class="muted"></span><div class="pagination-actions"><button type="button" class="button subtle" id="prevTaskBtn"><span data-icon="arrow-right"></span>السابقة</button><button type="button" class="button subtle" id="nextTaskBtn">التالية<span data-icon="arrow"></span></button></div></footer>
       </div>
+    </dialog>
 
-    </div>
-
-    <!-- Data Presentation Table -->
-    <div class="table-card">
-      <div class="table-responsive">
-        <table class="qa-table">
-          <thead>
-            <tr>
-              <th class="td-index">#</th>
-              <th class="td-id">كود الفحص</th>
-              <th class="td-severity">مستوى الخطورة</th>
-              <th class="td-title">المشكلة</th>
-              <th class="td-types">التصنيف</th>
-              <th class="td-scenario">سيناريو التجربة</th>
-            </tr>
-          </thead>
-          <tbody id="taskTableBody">
-            <!-- Dynamically populated rows -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-  </main>
-
-  <!-- Interactive Toast Notification -->
-  <div id="appToast" class="toast-notice">
-    <svg style="width: 16px; height: 16px; color: #10b981;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M20 6L9 17l-5-5"></path>
-    </svg>
-    <span id="toastMessage">تم النسخ إلى الحافظة بنجاح</span>
-  </div>
-
-  <!-- Local Scripts -->
-  <script src="data/manifest.js"></script>
-  <script src="js/app.js"></script>
-</body>
+    <script src="data/manifest.js"></script>
+  </body>
 </html>

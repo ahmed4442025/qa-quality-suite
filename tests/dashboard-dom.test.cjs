@@ -75,8 +75,7 @@ function findings(count = 3) {
 test("the original sample renders with a usable title, critical count, and full details", (t) => {
   const { d, $ } = setup(t);
   assert.equal(d.querySelectorAll(".issue-table tbody tr").length, 1);
-  assert.equal($("statCritical").textContent, "1");
-  assert.equal($("statHigh").textContent, "0");
+  assert.equal($("statPriority").textContent, "1");
   assert.equal($("statTotal").textContent, "1");
   assert.equal($("resultsSummary").textContent, "1 مشكلة");
   assert.equal($("projectName").textContent, "قالب تجريبي");
@@ -185,10 +184,10 @@ test("an active metric toggles off without losing module or platform scope", (t)
   const { d, $, change } = setup(t, { tasks: findings() });
   change("moduleFilter", "test");
   change("culpritFilter", "Mobile");
-  const metric = d.querySelector('[data-preset="critical"]');
+  const metric = d.querySelector('[data-preset="priority"]');
   metric.click();
   assert.equal(metric.getAttribute("aria-pressed"), "true");
-  assert.equal(d.querySelectorAll(".issue-row").length, 1);
+  assert.equal(d.querySelectorAll(".issue-row").length, 2);
   metric.click();
   assert.equal(metric.getAttribute("aria-pressed"), "false");
   assert.equal(d.querySelectorAll('[data-status-filter][aria-pressed="true"]').length, 0);
@@ -201,24 +200,26 @@ test("metric shortcuts clear incompatible filters so their counts match the resu
   const { d, $, change } = setup(t, { tasks: findings() });
   change("searchInput", "no-match");
   $("noTypesBtn").click();
-  d.querySelector('[data-preset="critical"]').click();
+  d.querySelector('[data-preset="priority"]').click();
   assert.equal($("searchInput").value, "");
   assert.equal(
     d.querySelectorAll(".issue-table tbody tr").length,
-    Number($("statCritical").textContent),
+    Number($("statPriority").textContent),
   );
   assert.equal(
     d.querySelectorAll('[data-status-filter][aria-pressed="true"]').length,
     2,
   );
-  assert.equal($("severityFilter").value, "Critical");
+  assert.equal($("severityFilter").value, "Priority");
 });
-test("the high-priority half filters only open high findings", (t) => {
+test("the priority shortcut filters open critical and high findings", (t) => {
   const { d, $ } = setup(t, { tasks: findings() });
-  d.querySelector('[data-preset="high"]').click();
-  assert.equal($("severityFilter").value, "High");
-  assert.equal(d.querySelectorAll(".issue-row").length, 1);
-  assert.equal(d.querySelector(".issue-row .issue-id").textContent, "T-3");
+  d.querySelector('[data-preset="priority"]').click();
+  assert.equal($("severityFilter").value, "Priority");
+  assert.deepEqual(
+    [...d.querySelectorAll(".issue-row .issue-id")].map((item) => item.textContent),
+    ["T-1", "T-3"],
+  );
 });
 test("deep links open the chosen task, retain filters, and render safe source text", (t) => {
   const tasks = findings();
@@ -298,15 +299,10 @@ test("detail report cards collapse to a compact row and expand again", (t) => {
   card = d.querySelector(".report-card");
   assert.ok(card.querySelector(".report-card-body"));
 });
-test("task board renders five states, opens details, and moves a card", async (t) => {
-  const calls = [];
-  const { w, d, $ } = setup(t, {
+test("task board renders five states and opens details", (t) => {
+  const { d, $ } = setup(t, {
     tasks: findings(),
     query: "?view=board",
-    fetcher: async (_, options) => {
-      calls.push(JSON.parse(options.body));
-      return { ok: true, json: async () => ({ ok: true }) };
-    },
   });
   assert.equal(d.querySelectorAll(".board-column").length, 5);
   assert.equal(d.querySelectorAll('[data-board-status="pending"] .board-card').length, 2);
@@ -315,12 +311,7 @@ test("task board renders five states, opens details, and moves a card", async (t
   d.querySelector('[data-board-task="T-1"] .board-card-title').click();
   assert.equal($("taskDialog").open, true);
   $("closeDetailBtn").click();
-  const move = d.querySelector('[data-board-move-id="T-1"]');
-  move.value = "in_progress";
-  move.dispatchEvent(new w.Event("change", { bubbles: true }));
-  assert.ok(d.querySelector('[data-board-status="in_progress"] [data-board-task="T-1"]'));
-  await settle();
-  assert.deepEqual(calls, [{ id: "T-1", status: "in_progress" }]);
+  assert.equal($("taskDialog").open, false);
   assert.equal(d.querySelector('[data-view="board"]').getAttribute("aria-pressed"), "true");
 });
 test("task board drag and drop persists the destination status", async (t) => {

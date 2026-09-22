@@ -119,6 +119,7 @@ test("critical metrics exclude resolved, archived, and cancelled findings", () =
     open: 3,
     critical: 1,
     high: 1,
+    priority: 2,
     in_progress: 1,
     done: 1,
     completionTotal: 4,
