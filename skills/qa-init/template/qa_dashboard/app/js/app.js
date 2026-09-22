@@ -32,6 +32,10 @@
     Backend: "الخادم",
     Both: "الموبايل والخادم",
   };
+  const severityNames = {
+    ...M.SEVERITIES,
+    Priority: "حرجة وعالية",
+  };
   const icons = {
     search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/>',
     filter: '<path d="M4 7h16M7 12h10M10 17h4"/>',
@@ -113,10 +117,8 @@
         state.statuses.includes("pending") &&
         state.statuses.includes("in_progress");
       const active =
-        preset === "critical"
-          ? openSelected && state.severity === "Critical"
-          : preset === "high"
-            ? openSelected && state.severity === "High"
+        preset === "priority"
+          ? openSelected && state.severity === "Priority"
           : preset === "open"
             ? openSelected && state.severity === "all"
             : preset === "all"
@@ -136,9 +138,8 @@
     for (const [id, key] of Object.entries({
       statTotal: "total",
       statOpen: "open",
-      statCritical: "critical",
-      statHigh: "high",
-      statInProgress: "in_progress",
+      statPriority: "priority",
+      statDone: "done",
     }))
       $(id).textContent = stats[key];
     const percent = completionStats.completionTotal
@@ -154,11 +155,6 @@
       $("completionCaption").textContent,
     );
     $("completionProgress").firstElementChild.style.width = `${percent}%`;
-    for (const [selector, value] of [
-      [".priority-critical", stats.critical],
-      [".priority-high", stats.high],
-    ])
-      document.querySelector(selector).dataset.empty = String(value === 0);
   }
   function filterLabels() {
     const labels = [];
@@ -178,7 +174,7 @@
           : `${state.statuses.length} حالات محددة`,
       ]);
     if (state.severity !== "all")
-      labels.push(["severity", `الأهمية: ${M.SEVERITIES[state.severity]}`]);
+      labels.push(["severity", `الأهمية: ${severityNames[state.severity]}`]);
     if (state.culprit !== "all")
       labels.push(["culprit", platformNames[state.culprit]]);
     if (state.types !== null)
@@ -324,14 +320,7 @@
   }
   function boardCard(task) {
     const busy = saving.has(task.id);
-    const visibleStatus = savingTargets.get(task.id) || task.status;
-    const options = Object.entries(M.STATUSES)
-      .map(
-        ([key, label]) =>
-          `<option value="${key}" ${visibleStatus === key ? "selected" : ""}>${label}</option>`,
-      )
-      .join("");
-    return `<article class="board-card${busy ? " is-saving" : ""}" draggable="${!busy}" data-board-task="${esc(task.id)}" data-focus-key="board-card-${esc(task.id)}" aria-busy="${busy}"><div class="board-card-top"><bdi class="issue-id">${esc(task.id)}</bdi><span class="board-drag-handle" aria-hidden="true" title="اسحب لنقل المهمة">${icon("grip")}</span></div><button type="button" class="board-card-title" data-open-task="${esc(task.id)}" data-focus-key="board-title-${esc(task.id)}">${esc(task.title)}</button><div class="board-card-footer">${severity(task)}<label class="board-move"><span class="sr-only">نقل ${esc(task.id)} إلى حالة أخرى</span><select data-board-move-id="${esc(task.id)}" aria-label="نقل ${esc(task.id)} إلى حالة أخرى" ${busy ? "disabled" : ""}>${options}</select></label></div></article>`;
+    return `<article class="board-card${busy ? " is-saving" : ""}" draggable="${!busy}" data-board-task="${esc(task.id)}" data-focus-key="board-card-${esc(task.id)}" aria-busy="${busy}"><div class="board-card-top"><div class="board-card-meta"><bdi class="issue-id">${esc(task.id)}</bdi>${severity(task)}</div><span class="board-drag-handle" aria-hidden="true" title="اسحب لنقل المهمة">${icon("grip")}</span></div><button type="button" class="board-card-title" data-open-task="${esc(task.id)}" data-focus-key="board-title-${esc(task.id)}">${esc(task.title)}</button><div class="board-card-footer" aria-label="موديول المشكلة"><span class="board-module">${esc(task.moduleName)}</span></div></article>`;
   }
   function boardColumn(status, label) {
     const items = filtered.filter(
@@ -340,7 +329,7 @@
     return `<section class="board-column board-column-${status}" data-board-status="${status}" aria-labelledby="board-heading-${status}"><header class="board-column-header"><h3 id="board-heading-${status}">${label}</h3><span class="board-count mono" aria-label="${items.length} مهام">${items.length}</span></header><div class="board-column-body">${items.length ? items.map(boardCard).join("") : '<div class="board-empty"><span>لا توجد مهام</span><small>اسحب مهمة إلى هنا</small></div>'}</div></section>`;
   }
   function renderBoard() {
-    return `<div class="board-shell"><p class="sr-only" id="boardHelp">يمكن سحب المهام بين الأعمدة، أو استخدام قائمة نقل الحالة داخل كل بطاقة.</p><div class="kanban-board" aria-label="لوحة حالات المهام" aria-describedby="boardHelp">${Object.entries(M.STATUSES).map(([status, label]) => boardColumn(status, label)).join("")}</div></div>`;
+    return `<div class="board-shell"><p class="sr-only" id="boardHelp">يمكن سحب المهام بين الأعمدة لتغيير حالتها.</p><div class="kanban-board" aria-label="لوحة حالات المهام" aria-describedby="boardHelp">${Object.entries(M.STATUSES).map(([status, label]) => boardColumn(status, label)).join("")}</div></div>`;
   }
   function pageTokens(current, pages) {
     if (pages <= 7) return Array.from({ length: pages }, (_, index) => index + 1);
@@ -706,10 +695,6 @@
       types: selected.length === types.length ? null : selected,
     });
   });
-  $("results").addEventListener("change", (event) => {
-    const select = event.target.closest("[data-board-move-id]");
-    if (select) setStatus(select.dataset.boardMoveId, select.value);
-  });
   $("results").addEventListener("dragstart", (event) => {
     const card = event.target.closest("[data-board-task]");
     if (!card || card.getAttribute("draggable") !== "true") return;
@@ -856,17 +841,13 @@
         changeFilters({
           statuses: active
             ? []
-            : preset === "critical" || preset === "high" || preset === "open"
+            : preset === "priority" || preset === "open"
               ? ["pending", "in_progress"]
               : preset === "all"
                 ? []
                 : [preset],
           severity:
-            !active && preset === "critical"
-              ? "Critical"
-              : !active && preset === "high"
-                ? "High"
-                : "all",
+            !active && preset === "priority" ? "Priority" : "all",
           search: "",
           types: null,
         });

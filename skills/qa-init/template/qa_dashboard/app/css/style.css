@@ -374,6 +374,7 @@ kbd {
   margin-bottom: 28px;
 }
 .metric {
+  --metric-color: var(--ink);
   border: 0;
   background: var(--surface);
   border-radius: 0;
@@ -383,11 +384,11 @@ kbd {
   overflow: hidden;
 }
 .metric:hover {
-  background: var(--tint);
+  background: color-mix(in srgb, var(--metric-color) 7%, var(--surface));
 }
 .metric[aria-pressed="true"] {
-  background: var(--tint);
-  box-shadow: inset 0 -3px var(--accent);
+  background: color-mix(in srgb, var(--metric-color) 11%, var(--surface));
+  box-shadow: inset 0 -3px var(--metric-color);
 }
 .metric:focus-visible {
   outline-offset: -4px;
@@ -402,7 +403,8 @@ kbd {
 }
 .metric-top > span[data-icon] {
   margin-inline-start: auto;
-  opacity: 0.8;
+  color: var(--metric-color);
+  opacity: 0.85;
 }
 .metric-top svg {
   width: 17px;
@@ -417,49 +419,19 @@ kbd {
   margin: 7px 0 0;
   text-align: start;
   direction: inherit;
+  color: var(--metric-color);
 }
-.priority-metric {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  min-width: 0;
-  overflow: hidden;
-  background: var(--surface);
+.metric-open {
+  --metric-color: var(--low);
 }
-.priority-segment {
-  min-width: 0;
-  padding: 14px 18px;
-  text-align: start;
-  border: 0;
-  border-radius: 0;
+.metric-priority {
+  --metric-color: color-mix(in srgb, var(--critical) 58%, var(--high));
 }
-.priority-critical {
-  background: var(--critical-bg);
-  color: var(--critical);
+.metric-done {
+  --metric-color: var(--success);
 }
-.priority-high {
-  background: var(--high-bg);
-  color: var(--high);
-}
-.priority-segment .metric-top,
-.priority-segment .metric-value {
-  color: inherit;
-}
-.priority-segment:hover,
-.priority-segment[aria-pressed="true"] {
-  background: color-mix(in srgb, currentColor 15%, var(--surface));
-}
-.priority-segment[aria-pressed="true"] {
-  box-shadow: inset 0 -3px currentColor;
-}
-.priority-segment:focus-visible {
-  outline-offset: -4px;
-}
-.priority-segment[data-empty="true"] {
-  background: var(--surface);
-  color: var(--muted);
-}
-.total-metric .metric-value {
-  color: var(--accent);
+.metric-total {
+  --metric-color: var(--accent);
 }
 .status-dot {
   display: inline-block;
@@ -1326,6 +1298,23 @@ kbd {
   gap: 8px;
 }
 .board-card-top { margin-bottom: 7px; }
+.board-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.board-card-meta .issue-id {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-card-meta .severity {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  font-size: 10px;
+}
 .board-drag-handle {
   color: var(--muted);
   opacity: 0.65;
@@ -1346,19 +1335,22 @@ kbd {
   text-align: start;
 }
 .board-card-title:hover { color: var(--accent); }
-.board-move {
-  position: relative;
-  max-width: 95px;
+.board-card-footer {
+  justify-content: flex-start;
+  flex-wrap: wrap;
 }
-.board-move select {
-  width: 100%;
-  height: 29px;
-  padding: 2px 7px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--soft);
-  color: var(--muted);
+.board-module {
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+  color: var(--accent-strong);
   font-size: 10px;
+  font-weight: 600;
+  line-height: 1.5;
 }
 .board-empty {
   display: grid;
@@ -2273,10 +2265,6 @@ body:has(.task-dialog[open]) {
   }
   .board-column-body {
     min-height: 240px;
-  }
-  .board-move select {
-    height: 40px;
-    font-size: 11px;
   }
   .report-card-header {
     padding: 16px;

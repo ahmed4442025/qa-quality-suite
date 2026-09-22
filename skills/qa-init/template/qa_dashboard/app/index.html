@@ -83,7 +83,7 @@
       <section class="metrics" aria-label="ملخص الجودة — اضغط لتصفية المشاكل">
         <button
           type="button"
-          class="metric"
+          class="metric metric-open"
           data-preset="open"
           aria-pressed="false"
         >
@@ -91,40 +91,30 @@
             >مشاكل مفتوحة<span data-icon="layers"></span></span
           ><span class="metric-value mono" id="statOpen">0</span>
         </button>
-        <div class="priority-metric" role="group" aria-label="الأولوية المفتوحة">
-          <button
-            type="button"
-            class="priority-segment priority-critical"
-            data-preset="critical"
-            aria-pressed="false"
-          >
-            <span class="metric-top"
-              ><span class="status-dot"></span>حرجة<span data-icon="alert"></span></span
-            ><span class="metric-value mono" id="statCritical">0</span>
-          </button><button
-            type="button"
-            class="priority-segment priority-high"
-            data-preset="high"
-            aria-pressed="false"
-          >
-            <span class="metric-top"
-              ><span class="status-dot"></span>عالية<span data-icon="activity"></span></span
-            ><span class="metric-value mono" id="statHigh">0</span>
-          </button>
-        </div>
         <button
           type="button"
-          class="metric"
-          data-preset="in_progress"
+          class="metric metric-priority"
+          data-preset="priority"
           aria-pressed="false"
+          aria-label="المشاكل المفتوحة الحرجة والعالية"
         >
           <span class="metric-top"
-            >جاري العمل<span data-icon="activity"></span></span
-          ><span class="metric-value mono" id="statInProgress">0</span>
+            >حرجة وعالية<span data-icon="alert"></span></span
+          ><span class="metric-value mono" id="statPriority">0</span>
         </button>
         <button
           type="button"
-          class="metric total-metric"
+          class="metric metric-done"
+          data-preset="done"
+          aria-pressed="false"
+        >
+          <span class="metric-top"
+            >تم الحل<span data-icon="check"></span></span
+          ><span class="metric-value mono" id="statDone">0</span>
+        </button>
+        <button
+          type="button"
+          class="metric metric-total"
           data-preset="all"
           aria-pressed="false"
         >
@@ -217,6 +207,7 @@
                       <option value="all">كل المستويات</option>
                       <option value="Critical">حرجة</option>
                       <option value="High">عالية</option>
+                      <option value="Priority">حرجة وعالية</option>
                       <option value="Medium">متوسطة</option>
                       <option value="Low">منخفضة</option>
                     </select>

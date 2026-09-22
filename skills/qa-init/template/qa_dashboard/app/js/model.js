@@ -107,7 +107,7 @@
     state.statuses = [
       ...new Set(requestedStatuses.filter((key) => Object.hasOwn(STATUSES, key))),
     ];
-    if (["all", ...Object.keys(SEVERITIES)].includes(p.get("severity")))
+    if (["all", "Priority", ...Object.keys(SEVERITIES)].includes(p.get("severity")))
       state.severity = p.get("severity");
     if (["all", "Mobile", "Backend", "Both"].includes(p.get("culprit")))
       state.culprit = p.get("culprit");
@@ -182,7 +182,12 @@
     return scope(tasks, state).filter((t) => {
       if (state.statuses.length && !state.statuses.includes(t.status))
         return false;
-      if (state.severity !== "all" && t.severity !== state.severity)
+      if (
+        state.severity !== "all" &&
+        (state.severity === "Priority"
+          ? !["Critical", "High"].includes(t.severity)
+          : t.severity !== state.severity)
+      )
         return false;
       if (
         state.types !== null &&
@@ -229,6 +234,8 @@
       open: open.length,
       critical: open.filter((t) => t.severity === "Critical").length,
       high: open.filter((t) => t.severity === "High").length,
+      priority: open.filter((t) => ["Critical", "High"].includes(t.severity))
+        .length,
       in_progress: tasks.filter((t) => t.status === "in_progress").length,
       done: tasks.filter((t) => t.status === "done").length,
       completionTotal: tasks.filter((t) =>
