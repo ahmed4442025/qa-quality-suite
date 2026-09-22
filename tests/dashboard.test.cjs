@@ -9,8 +9,11 @@ test("dashboard template separates replaceable runtime from project data", () =>
   for (const relative of [
     "app/index.html",
     "app/js/app.js",
+    "app/js/sync-report.cjs",
     "app/server.ps1",
     "app/run.bat",
+    "app/sync-report.ps1",
+    "app/sync-report.bat",
     "config.js",
     "data/manifest.js",
     "run.bat",
@@ -25,6 +28,19 @@ test("dashboard template separates replaceable runtime from project data", () =>
   assert.match(server, /Join-Path \$dashboardRoot "data"/);
   const launcher = fs.readFileSync(path.join(dashboardRoot, "run.bat"), "utf8");
   assert.match(launcher, /app\\server\.ps1/);
+});
+
+test("report sync tooling stays inside the dashboard runtime", () => {
+  const reportRoot = path.join(__dirname, "../skills/qa-init/template/qa_report");
+  for (const relative of ["sync-report.ps1", "sync-report.bat", "scripts"])
+    assert.equal(fs.existsSync(path.join(reportRoot, relative)), false, relative);
+  const powershell = fs.readFileSync(
+    path.join(dashboardRoot, "app/sync-report.ps1"),
+    "utf8",
+  );
+  assert.match(powershell, /Split-Path -Parent \$PSScriptRoot/);
+  assert.match(powershell, /"qa_report"/);
+  assert.doesNotMatch(powershell, /[\u0600-\u06ff]/);
 });
 
 test("dashboard server handles Ctrl+C without a PowerShell callback deadlock", () => {
